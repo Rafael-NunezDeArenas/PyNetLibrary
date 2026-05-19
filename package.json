@@ -1,0 +1,20 @@
+{
+  "name": "pynetlibrary",
+  "version": "1.0.0",
+  "description": "<p align=\"center\">\r   <img src=\"https://github.com/rafa2403nunez-droid/PyNetLibrary/blob/main/Assets/PyNetLibrary.png\" width=\"300\"/>\r </p>",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@thatopen/components": "^3.4.0",
+    "@thatopen/ui": "^3.4.0",
+    "three": "^0.183.2"
+  },
+  "devDependencies": {
+    "vite": "^5.4.11"
+  }
+}
