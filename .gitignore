@@ -1,0 +1,5 @@
+AI_History/
+__pycache__/
+.claude/
+*.zip
+*.pdf

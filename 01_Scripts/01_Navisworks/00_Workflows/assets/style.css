@@ -1,0 +1,122 @@
+/* =========================
+   Reset y Layout
+========================= */
+body {
+    margin: 0;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f4f6f8;
+    color: #333;
+}
+
+.container {
+    width: 90%;
+    margin: auto;
+    padding: 20px 0;
+}
+
+/* Título */
+.title {
+    text-align: center;
+    font-size: 32px;
+    font-weight: 600;
+    margin-bottom: 30px;
+}
+
+/* =========================
+   Cards
+========================= */
+.cards-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 40px;
+}
+
+.card {
+    background: white; /* por defecto para Tiempo ejecución */
+    color: #333;
+    border-radius: 12px;
+    padding: 15px 20px;
+    min-width: 150px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+}
+
+.card-title {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+.card-value {
+    font-size: 26px;
+    font-weight: 600;
+    margin-top: 6px;
+}
+
+/* Card grande (Tiempo ejecución) */
+.card-large {
+    min-width: 220px;
+    background: white; /* fondo blanco */
+    color: #333;
+}
+
+/* =========================
+   Estados Navisworks
+========================= */
+.card-new {
+    background: linear-gradient(135deg, #ff7f7f, #ff4c4c);
+    color: white;
+}
+
+.card-active {
+    background: linear-gradient(135deg, #ffc966, #ffb300);
+    color: white;
+}
+
+.card-reviewed {
+    background: linear-gradient(135deg, #66b3ff, #3385ff);
+    color: white;
+}
+
+.card-approved {
+    background: linear-gradient(135deg, #7fff7f, #33cc33);
+    color: white;
+}
+
+.card-resolved {
+    background: linear-gradient(135deg, #d1b3ff, #9933ff);
+    color: white;
+}
+
+/* =========================
+   Gráficos
+========================= */
+.graphs-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+.graph {
+    background: white;
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    overflow: hidden; /* evita que la gráfica haga scroll extraño */
+}
+
+/* =========================
+   Responsive
+========================= */
+@media (max-width: 900px) {
+    .graphs-container {
+        grid-template-columns: 1fr;
+    }
+}
