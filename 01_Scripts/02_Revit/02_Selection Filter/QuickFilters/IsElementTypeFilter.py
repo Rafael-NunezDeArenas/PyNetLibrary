@@ -1,60 +1,25 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
-import string
-import sys
 import clr
 
-clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
+clr.AddReference("RevitAPI")
+clr.AddReference("RevitAPIUI")
 
-clr.AddReference('RevitAPI')
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+uidoc = __revit__.ActiveUIDocument  #type:ignore
+doc = uidoc.Document
 
-clr.AddReference('RevitNodes')
-import Revit
-clr.ImportExtensions(Revit.GeometryConversion)
-clr.ImportExtensions(Revit.Elements)
 
-clr.AddReference('RevitServices')
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
-from System.Collections.Generic import List
+class IsElementTypeFilterScript:
+    @staticmethod
+    def Run(doc):
+        isElementTypeFilter = ElementIsElementTypeFilter()
+        collectorFilter = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Walls).WherePasses(isElementTypeFilter).ToElements()
 
-doc = DocumentManager.Instance.CurrentDBDocument
-uiapp = DocumentManager.Instance.CurrentUIApplication
-app = uiapp.Application
-uidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument
+        collectorSimplified = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Walls).WhereElementIsElementType().ToElements()
+        collectorSimplifiedInverse = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Walls).WhereElementIsNotElementType().ToElements()
 
-# Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
+        print(f"Wall types via filter: {len(collectorFilter)}, via WhereElementIsElementType: {len(collectorSimplified)}, instances: {len(collectorSimplifiedInverse)}.")
+        return list(collectorFilter), list(collectorSimplified)
 
-import System
-from System.Windows.Forms import*
-from System.Drawing import*
 
-clr.AddReference('System')
-from System.Collections.Generic import List
-
-#endregion
-
-#region Is Element Type
-
-# This IsElementType Filter accept a Inverse including true
-isElementTypeFilter = ElementIsElementTypeFilter()
-collectorFilter = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Walls).WherePasses(isElementTypeFilter).ToElements()
-
-# Collect Elements without Filter Creation
-collectorSimplified = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Walls).WhereElementIsElementType().ToElements()
-collectorSimplifiedInverse = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Walls).WhereElementIsNotElementType().ToElements()
-
-OUT = collectorFilter, collectorSimplified
-
-#endregion
+IsElementTypeFilterScript.Run(doc)

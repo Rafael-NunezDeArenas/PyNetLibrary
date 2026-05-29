@@ -1,44 +1,31 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
 import clr
 
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+doc = __revit__.ActiveUIDocument.Document  #type:ignore
 
-from System.Collections.Generic import List
 
-#Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
+class UnitsDemo:
+    @staticmethod
+    def Run():
+        value = 32.0
 
-from System.Windows.Forms import*
-from System.Drawing import*
+        # Revit 2022+ API (UnitTypeId)
+        try:
+            to_internal = UnitUtils.ConvertToInternalUnits(value, UnitTypeId.Meters)
+            from_internal = UnitUtils.ConvertFromInternalUnits(value, UnitTypeId.Meters)
+            print(f"{value} m → internal: {to_internal:.6f} ft")
+            print(f"{value} internal ft → m: {from_internal:.6f} m")
+        except Exception as e:
+            print(f"UnitTypeId API not available: {e}")
 
-uidoc = __revit__.ActiveUIDocument #type:ignore
-doc = uidoc.Document
+        # Revit 2021 and earlier fallback (DisplayUnitType — deprecated)
+        try:
+            to_internal_legacy = UnitUtils.ConvertToInternalUnits(value, DisplayUnitType.DUT_METERS)  # type:ignore
+            print(f"Legacy: {value} m → internal: {to_internal_legacy:.6f} ft")
+        except Exception:
+            print("Legacy DisplayUnitType API not available in this Revit version.")
 
-# endregion
 
-#region Convert Units
-
-value = 32
-
-# Convert to internal revit 2021 and next versions
-convertToInternal = UnitUtils.ConvertToInternalUnits(value, UnitTypeId.Meters)
-# Convert to internal revit before 2021
-convertToInternal = UnitUtils.ConvertToInternalUnits(value, DisplayUnitType.DUT_Meters) #type: ignore
-
-# Convert from internal 2021 and next versions
-convertFromInternal = UnitUtils.ConvertFromInternalUnits(value, UnitTypeId.Meters) 
-# Convert from internal revit before 2021
-convertToInternal = UnitUtils.ConvertFromInternalUnits(value, DisplayUnitType.DUT_Meters) #type: ignore
-
-OUT = convertFromInternal, convertToInternal
-
-#endregion
+UnitsDemo.Run()

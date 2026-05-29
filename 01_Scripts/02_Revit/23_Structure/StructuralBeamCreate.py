@@ -1,46 +1,53 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
-import string
-import sys
 import clr
 
-clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
-
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import TrussType, Truss
+from Autodesk.Revit.DB.Structure import StructuralType
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+doc = __revit__.ActiveUIDocument.Document  #type:ignore
 
-clr.AddReference('RevitNodes')
-import Revit
-clr.ImportExtensions(Revit.GeometryConversion)
-clr.ImportExtensions(Revit.Elements)
 
-clr.AddReference('RevitServices')
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
-from System.Collections.Generic import List
+def m_to_ft(meters):
+    return UnitUtils.ConvertToInternalUnits(meters, UnitTypeId.Meters)
 
-doc = DocumentManager.Instance.CurrentDBDocument
-uiapp = DocumentManager.Instance.CurrentUIApplication
-app = uiapp.Application
-uidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument
 
-# Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
+class StructuralBeamCreateScript:
+    @staticmethod
+    def Run(doc):
+        beam_symbol = next(
+            (fs for fs in FilteredElementCollector(doc).OfClass(FamilySymbol)
+             if fs.Category.Id.IntegerValue == int(BuiltInCategory.OST_StructuralFraming)),
+            None
+        )
 
-import System
-from System.Windows.Forms import*
-from System.Drawing import*
+        if beam_symbol is None:
+            print("No structural framing family loaded in project.")
+            return
 
-# Analyze the Coincidence of the Unit Names
-from difflib import SequenceMatcher
+        level = (FilteredElementCollector(doc)
+                 .OfClass(Level).WhereElementIsNotElementType().FirstElement())
 
-#endregion
+        if level is None:
+            print("No level found in project.")
+            return
+
+        start = XYZ(0, 0, level.Elevation)
+        end = XYZ(m_to_ft(5), 0, level.Elevation)
+        line = Line.CreateBound(start, end)
+
+        t = Transaction(doc, "PyNET - Create Structural Beam")
+        t.Start()
+        try:
+            if not beam_symbol.IsActive:
+                beam_symbol.Activate()
+            beam = doc.Create.NewFamilyInstance(
+                line, beam_symbol, level, StructuralType.Beam)
+            t.Commit()
+        except:
+            t.RollBack()
+            raise
+
+        print(f"Created beam id={beam.Id} on level '{level.Name}'.")
+
+
+StructuralBeamCreateScript.Run(doc)

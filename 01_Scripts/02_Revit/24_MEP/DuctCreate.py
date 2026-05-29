@@ -1,58 +1,56 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
-from platform import system_alias
-import string
-import sys
 import clr
 
-clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
-
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 from Autodesk.Revit.DB.Mechanical import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+doc = __revit__.ActiveUIDocument.Document  #type:ignore
 
-clr.AddReference('RevitNodes')
-import Revit
-clr.ImportExtensions(Revit.GeometryConversion)
-clr.ImportExtensions(Revit.Elements)
 
-clr.AddReference('RevitServices')
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
-from System.Collections.Generic import List
+def m_to_ft(meters):
+    return UnitUtils.ConvertToInternalUnits(meters, UnitTypeId.Meters)
 
-doc = DocumentManager.Instance.CurrentDBDocument
-uiapp = DocumentManager.Instance.CurrentUIApplication
-app = uiapp.Application
-uidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument
 
-# Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
+class DuctCreateScript:
+    @staticmethod
+    def Run(doc):
+        duct_type_id = (FilteredElementCollector(doc)
+                        .OfClass(DuctType).FirstElementId())
 
-import System
-from System.Windows.Forms import*
-from System.Drawing import*
+        if duct_type_id == ElementId.InvalidElementId:
+            print("No duct type found in project.")
+            return
 
-# Analyze the Coincidence of the Unit Names
-from difflib import SequenceMatcher
+        level = (FilteredElementCollector(doc)
+                 .OfClass(Level).WhereElementIsNotElementType().FirstElement())
 
-#endregion
+        if level is None:
+            print("No level found in project.")
+            return
 
-#region Create Ducts
+        mep_system = next(
+            (s for s in FilteredElementCollector(doc).OfClass(MEPSystemType)
+             if s.SystemClassification == MEPSystemClassification.ReturnAir),
+            None
+        )
 
-# Get Mechanical Inputs
-ductType = FilteredElementCollector(doc).OfClass(DuctType).FirstElementId()
-mepSystemTypes = FilteredElementCollector(doc).OfClass(MEPSystemType)
-systemType = [sysType for sysType in mepSystemTypes if sysType.SystemClassification == MEPSystemClassification.ReturnAir][0]
+        if mep_system is None:
+            print("No ReturnAir MEP system type found.")
+            return
 
-OUT = systemType
-#endregion
+        start = XYZ(0, 0, m_to_ft(3))
+        end = XYZ(m_to_ft(5), 0, m_to_ft(3))
+
+        t = Transaction(doc, "PyNET - Create Duct")
+        t.Start()
+        try:
+            duct = Duct.Create(doc, mep_system.Id, duct_type_id, level.Id, start, end)
+            t.Commit()
+        except:
+            t.RollBack()
+            raise
+
+        print(f"Created duct id={duct.Id} on level '{level.Name}'.")
+
+
+DuctCreateScript.Run(doc)

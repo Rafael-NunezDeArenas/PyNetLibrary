@@ -1,64 +1,39 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
 import clr
-
-clr.AddReference('RevitAPI')
-from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
-
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
-
-from System.Collections.Generic import List
-
-#Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
-
-from System.Windows.Forms import*
-from System.Drawing import*
-
-uidoc = __revit__.ActiveUIDocument #type:ignore
-doc = uidoc.Document
-
 from difflib import SequenceMatcher
 
-#endregion
+clr.AddReference("RevitAPI")
+from Autodesk.Revit.DB import *
 
-#region Convert Units
+doc = __revit__.ActiveUIDocument.Document  #type:ignore
 
-value = IN[0] #type:ignore
-unitName = IN[1] #type:ignore
-bool = IN[2] #type:ignore
 
-def ConvertUnits(value, unitName, bool = True):
-    # Get All Units
-    units = UnitUtils.GetAllUnits()
-    unit = None
-    # Search a Unit Almost Equal to Input
-    for unit in units:
+def convert_units(value, unit_name, to_internal=True):
+    """Find a unit type by fuzzy name match and convert value to/from internal Revit units."""
+    unit_filter = None
+    for unit in UnitUtils.GetAllUnits():
         name = UnitUtils.GetTypeCatalogStringForUnit(unit)
-        ratio = SequenceMatcher(a = name, b = unitName.ToUpper()).ratio()
-        if ratio > 0.85:
-            unitFilter = unit
+        if SequenceMatcher(a=name, b=unit_name.upper()).ratio() > 0.85:
+            unit_filter = unit
             break
-        else:
-            pass
-    # Convert Unit if Unit is Diferent to None
-    if unitFilter != None:
-        if bool == True:
-            result = UnitUtils.ConvertToInternalUnits(value, unitFilter)
-            name = UnitUtils.GetTypeCatalogStringForUnit(unit)
-        if bool == False:
-            result = UnitUtils.ConvertFromInternalUnits(value, unitFilter)
-            name = UnitUtils.GetTypeCatalogStringForUnit(unit)
-        return result, name
-    # If Unit Filter None Return None
-    elif unitFilter == None:
+    if unit_filter is None:
         return None
+    if to_internal:
+        return UnitUtils.ConvertToInternalUnits(value, unit_filter)
+    return UnitUtils.ConvertFromInternalUnits(value, unit_filter)
 
-OUT = ConvertUnits(value, unitName)
 
-#endregion
+class ConvertUnitsScript:
+    @staticmethod
+    def Run():
+        examples = [
+            (3.0, "meters", True),
+            (10.0, "feet", True),
+            (1.0, "inches", False),
+        ]
+        for value, unit, to_internal in examples:
+            result = convert_units(value, unit, to_internal)
+            direction = "→ internal" if to_internal else "← from internal"
+            print(f"{value} {unit} {direction} = {result:.6f}")
+
+
+ConvertUnitsScript.Run()

@@ -1,59 +1,27 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
-import string
-import sys
 import clr
 
-clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
-
-clr.AddReference('RevitAPI')
-import Autodesk
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
-
-clr.AddReference('RevitNodes')
-import Revit
-clr.ImportExtensions(Revit.GeometryConversion)
-clr.ImportExtensions(Revit.Elements)
-
-clr.AddReference('RevitServices')
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
-from System.Collections.Generic import List
-
-doc = DocumentManager.Instance.CurrentDBDocument
-uiapp = DocumentManager.Instance.CurrentUIApplication
-app = uiapp.Application
-uidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument
-
-# Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
-
-import System
-from System.Windows.Forms import*
-from System.Drawing import*
-
-clr.AddReference('System')
-from System.Collections.Generic import List
-
-#endregion
-
-#region Autodesk Login
+app = __revit__.Application  #type:ignore
 
 
-if Autodesk.Revit.ApplicationServices.Application.IsLoggedIn != False:
-    userId = app.LoginUserId
-else:
-    userId = "User Not Logged. Try to log in order to obtain the user Id"
+class AutodeskUserLoginScript:
+    @staticmethod
+    def Run(app):
+        try:
+            is_logged_in = app.IsLoggedIn
+        except Exception:
+            # Older Revit API — check via LoginUserId
+            is_logged_in = bool(app.LoginUserId)
 
-OUT = userId
+        if is_logged_in:
+            user_id = app.LoginUserId
+            print(f"Logged in as: {user_id}")
+        else:
+            print("User not logged in. Sign in to Autodesk to obtain the user ID.")
 
-#endregion
+        return app.LoginUserId if is_logged_in else None
+
+
+AutodeskUserLoginScript.Run(app)
