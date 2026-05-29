@@ -1,47 +1,30 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
 import clr
 
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
+clr.AddReference("RevitAPIUI")
+
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
-
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
-
 from System.Collections.Generic import List
 
-#Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
-
-from System.Windows.Forms import*
-from System.Drawing import*
-
-uidoc = __revit__.ActiveUIDocument #type:ignore
+uidoc = __revit__.ActiveUIDocument  #type:ignore
 doc = uidoc.Document
 
-# endregion
 
-# region Logical And Filter
+class LogicalAndFilterScript:
+    @staticmethod
+    def Run(doc):
+        elementTypeFilter = ElementIsElementTypeFilter()
 
-# Element Is Element Type Filter
-elementTypeFilter = ElementIsElementTypeFilter()
+        categories = List[BuiltInCategory]([BuiltInCategory.OST_Walls, BuiltInCategory.OST_Doors])
+        multiCategoryFilter = ElementMulticategoryFilter(categories)
 
-# MultiCategoryFilter
-categories = [BuiltInCategory.OST_Walls, BuiltInCategory.OST_Doors]
-categories = List[BuiltInCategory](categories)
-multiCategoryFilter = ElementMulticategoryFilter(categories)
+        filters = List[ElementFilter]([multiCategoryFilter, elementTypeFilter])
+        logicalFilter = LogicalAndFilter(filters)
 
-# Logical And Filter
-filters = List[ElementFilter]([multiCategoryFilter, elementTypeFilter])
-logicalFilter = LogicalAndFilter(filters)
+        collector = FilteredElementCollector(doc).WherePasses(logicalFilter).ToElements()
 
-# Collect Elements
-collector = FilteredElementCollector(doc).WherePasses(logicalFilter).ToElements()
+        print(f"Found {len(collector)} Wall/Door element type(s) via LogicalAndFilter.")
+        return list(collector)
 
-OUT = collector 
 
-# endregion
+LogicalAndFilterScript.Run(doc)

@@ -1,100 +1,69 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
 import clr
 
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
+clr.AddReference("RevitAPIUI")
+
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
-
-from System.Collections.Generic import List
-
-#Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
-
-from System.Windows.Forms import*
-from System.Drawing import*
-
-uidoc = __revit__.ActiveUIDocument #type:ignore
+uidoc = __revit__.ActiveUIDocument  #type:ignore
 doc = uidoc.Document
 
-# endregion
+TOLERANCE_M = 0.3
 
-# region Get panels of a Room
 
-# Rooms Input
-rooms = UnwrapElement(IN[0]) #type: ignore
+class GetPanelsOfARoomScript:
+    @staticmethod
+    def Run(doc):
+        rooms = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Rooms).WhereElementIsNotElementType().ToElements()
+        panels = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_CurtainWallPanels).WhereElementIsNotElementType().ToElements()
 
-# Curtain Panels Input
-panels = UnwrapElement(IN[1]) #type: ignore
+        tolerance = UnitUtils.ConvertToInternalUnits(TOLERANCE_M, UnitTypeId.Meters)  #type:ignore
 
-# Tolerance Input
-tolerance = IN[2] #type: ignore
+        opts = Options()
+        opts.DetailLevel = ViewDetailLevel.Fine
 
-# Create def Convert Tolerance to Internal Units
-def convertToMeters(value):
-	result = UnitUtils.ConvertToInternalUnits(value, UnitTypeId.Meters) #type: ignore
-	return result
+        result = GetPanelsOfARoomScript._GetPanelsOfARoom(list(rooms), list(panels), tolerance, opts)
+        print(f"Processed {len(list(rooms))} room(s) and {len(list(panels))} curtain panel(s). Found {len(result)} room-panel group(s).")
+        return result
 
-def GetPanelsOfARoom(rooms, panels, tolerance):
-# Create Geometry Options
-    opts = Options()
-    opts.DetailLevel = ViewDetailLevel.Fine
-# Create Empty List where append the Result
-    collectionRoomsPanels = []
-#Iterate Rooms and Create a List for each Room
-    for room in rooms:
-        panelsResult = []
-#Iterate Panels and Get the Geometry of the Element
-        for panel in panels:
-            geoElem = panel.get_Geometry(opts)
-#Get Solids of the Geometry of the Element
-            for geoObject in geoElem:
-                geoInstances = geoObject.GetInstanceGeometry()
-#Iterate Solids and desprise the solid with Volune less than a Tolerance. Obtain Centroid
-                for instance in geoInstances:
-                    if instance.__class__ == Solid and instance.Volume > 0.1:
-                        centroid = instance.ComputeCentroid()
-# Determinate Solid Orientation. Obtains Normal Points
-                        if panel.HandOrientation.IsAlmostEqualTo(XYZ(1, 0, 0)) or panel.HandOrientation.IsAlmostEqualTo(XYZ(-1, 0, 0)):
-                            p1 = XYZ(centroid.X, centroid.Y + convertToMeters(tolerance), centroid.Z)
-                            p2 = XYZ(centroid.X, centroid.Y - convertToMeters(tolerance), centroid.Z)
-                        if panel.HandOrientation.IsAlmostEqualTo(XYZ(0, 1, 0)) or panel.HandOrientation.IsAlmostEqualTo(XYZ(0, -1, 0)):
-                            p1 = XYZ(centroid.X + convertToMeters(tolerance), centroid.Y, centroid.Z)
-                            p2 = XYZ(centroid.X - convertToMeters(tolerance), centroid.Y, centroid.Z)
-                        if panel.HandOrientation.X < 0 and panel.HandOrientation.Y > 0: 
-                            p1 = XYZ(centroid.X + convertToMeters(tolerance), centroid.Y + convertToMeters(tolerance), centroid.Z)
-                            p2 = XYZ(centroid.X - convertToMeters(tolerance), centroid.Y - convertToMeters(tolerance), centroid.Z)
-                        if panel.HandOrientation.X < 0 and panel.HandOrientation.Y < 0: 
-                            p1 = XYZ(centroid.X - convertToMeters(tolerance), centroid.Y + convertToMeters(tolerance), centroid.Z)
-                            p2 = XYZ(centroid.X + convertToMeters(tolerance), centroid.Y - convertToMeters(tolerance), centroid.Z)
-                        if panel.HandOrientation.X > 0 and panel.HandOrientation.Y > 0: 
-                            p1 = XYZ(centroid.X + convertToMeters(tolerance), centroid.Y - convertToMeters(tolerance), centroid.Z)
-                            p2 = XYZ(centroid.X - convertToMeters(tolerance), centroid.Y + convertToMeters(tolerance), centroid.Z)
-                        if panel.HandOrientation.X > 0 and panel.HandOrientation.Y < 0: 
-                            p1 = XYZ(centroid.X + convertToMeters(tolerance), centroid.Y + convertToMeters(tolerance), centroid.Z)
-                            p2 = XYZ(centroid.X - convertToMeters(tolerance), centroid.Y - convertToMeters(tolerance), centroid.Z)
-                        else:
-                            pass
-# Determinate if the Normal Points are contained in the Room. Append Room and Panel if it is True
-                        if room.IsPointInRoom(p1) or room.IsPointInRoom(p2):
-                            if panelsResult.Contains(room):
-                                pass
-                            else:
-                                panelsResult.append(room)
-                            panelsResult.append(panel)
-                        else:
-                            pass
-# Append list with Room and Panels To Restult List
-        collectionRoomsPanels.append(panelsResult)
-# Clean Empty Lists
-    result = [x for x in collectionRoomsPanels if x !=[]]
-    return result
+    @staticmethod
+    def _GetPanelsOfARoom(rooms, panels, tolerance, opts):
+        collectionRoomsPanels = []
+        for room in rooms:
+            panelsResult = []
+            for panel in panels:
+                geoElem = panel.get_Geometry(opts)
+                for geoObject in geoElem:
+                    if not hasattr(geoObject, "GetInstanceGeometry"):
+                        continue
+                    geoInstances = geoObject.GetInstanceGeometry()
+                    for instance in geoInstances:
+                        if instance.__class__ == Solid and instance.Volume > 0.1:
+                            centroid = instance.ComputeCentroid()
+                            p1, p2 = GetPanelsOfARoomScript._GetNormalPoints(panel, centroid, tolerance)
+                            if p1 is not None and (room.IsPointInRoom(p1) or room.IsPointInRoom(p2)):
+                                if room not in panelsResult:
+                                    panelsResult.append(room)
+                                panelsResult.append(panel)
+            collectionRoomsPanels.append(panelsResult)
+        return [x for x in collectionRoomsPanels if x != []]
 
-# Generate Output 
-OUT =  GetPanelsOfARoom(rooms, panels, tolerance)
+    @staticmethod
+    def _GetNormalPoints(panel, centroid, tolerance):
+        h = panel.HandOrientation
+        if h.IsAlmostEqualTo(XYZ(1, 0, 0)) or h.IsAlmostEqualTo(XYZ(-1, 0, 0)):
+            return XYZ(centroid.X, centroid.Y + tolerance, centroid.Z), XYZ(centroid.X, centroid.Y - tolerance, centroid.Z)
+        if h.IsAlmostEqualTo(XYZ(0, 1, 0)) or h.IsAlmostEqualTo(XYZ(0, -1, 0)):
+            return XYZ(centroid.X + tolerance, centroid.Y, centroid.Z), XYZ(centroid.X - tolerance, centroid.Y, centroid.Z)
+        if h.X < 0 and h.Y > 0:
+            return XYZ(centroid.X + tolerance, centroid.Y + tolerance, centroid.Z), XYZ(centroid.X - tolerance, centroid.Y - tolerance, centroid.Z)
+        if h.X < 0 and h.Y < 0:
+            return XYZ(centroid.X - tolerance, centroid.Y + tolerance, centroid.Z), XYZ(centroid.X + tolerance, centroid.Y - tolerance, centroid.Z)
+        if h.X > 0 and h.Y > 0:
+            return XYZ(centroid.X + tolerance, centroid.Y - tolerance, centroid.Z), XYZ(centroid.X - tolerance, centroid.Y + tolerance, centroid.Z)
+        if h.X > 0 and h.Y < 0:
+            return XYZ(centroid.X + tolerance, centroid.Y + tolerance, centroid.Z), XYZ(centroid.X - tolerance, centroid.Y - tolerance, centroid.Z)
+        return None, None
+
+
+GetPanelsOfARoomScript.Run(doc)

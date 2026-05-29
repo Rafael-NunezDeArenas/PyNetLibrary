@@ -1,66 +1,50 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
 import clr
 
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
+clr.AddReference("RevitAPIUI")
+
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
-
-from System.Collections.Generic import List
-
-#Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
-
-from System.Windows.Forms import*
-from System.Drawing import*
-
-uidoc = __revit__.ActiveUIDocument #type:ignore
+uidoc = __revit__.ActiveUIDocument  #type:ignore
 doc = uidoc.Document
 
-# endregion
+CATEGORY = BuiltInCategory.OST_Doors
 
-# region Get Doors of a Room
 
-# Input Phase, necessary to obtain Rooms From Family Instance
-phase = UnwrapElement(IN[0]) #type: ignore
-category = UnwrapElement(IN[1]) #type: ignore
+class GetDoorsOrWindowsOfARoomScript:
+    @staticmethod
+    def Run(doc):
+        phases = FilteredElementCollector(doc).OfClass(Phase).ToElements()
+        phase = list(phases)[-1] if phases else None
+        if phase is None:
+            print("No phases found in document.")
+            return []
 
-# Determinate if the Family Instance Category is Door or Window
-if category.Id.ToString() != str(int(BuiltInCategory.OST_Doors)) or category.Id.ToString() != str(int(BuiltInCategory.OST_Windows)):
-	OUT = "It is necessary to Select Doors or Window Category"
-if category.Id.ToString() == str(int(BuiltInCategory.OST_Doors)) or category.Id.ToString() == str(int(BuiltInCategory.OST_Windows)):
-	categoryFilter = ElementCategoryFilter(category.Id)
-	
-# Collect Rooms
-	rooms = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Rooms).WhereElementIsNotElementType().ToElements()
-	
-# Collect Doors
-	familyInstances = FilteredElementCollector(doc).WherePasses(categoryFilter).WhereElementIsNotElementType().ToElements()
-	
-# Definition Get Room from Doors
-	def GetRoomDoors(familyInstances, rooms, phase):
-		result = []
-		for room in rooms:
-			listInstance = []
-			listRoom = []
-			listInstance.append(room)
-			for instance in familyInstances:
-				if instance.__class__ == FamilyInstance and hasattr(instance, "ToRoom") and hasattr(instance, "FromRoom"):
-					fromRoom = instance.FromRoom[phase]
-					if instance.ToRoom[phase] != None and room.Id == instance.ToRoom[phase].Id:
-						listRoom.append(instance)
-					if instance.FromRoom[phase] != None and room.Id == instance.FromRoom[phase].Id:
-						listRoom.append(instance)
-			listInstance.append(listRoom)		
-			result.append(listInstance)
-		return result
-	
-OUT = GetRoomDoors(familyInstances, rooms, phase)
+        category = doc.Settings.Categories.get_Item(CATEGORY)
+        categoryFilter = ElementCategoryFilter(category.Id)
 
-#endregion
+        rooms = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Rooms).WhereElementIsNotElementType().ToElements()
+        familyInstances = FilteredElementCollector(doc).WherePasses(categoryFilter).WhereElementIsNotElementType().ToElements()
+
+        def GetRoomDoors(familyInstances, rooms, phase):
+            result = []
+            for room in rooms:
+                listInstance = [room]
+                listRoom = []
+                for instance in familyInstances:
+                    if instance.__class__ == FamilyInstance and hasattr(instance, "ToRoom") and hasattr(instance, "FromRoom"):
+                        if instance.ToRoom[phase] is not None and room.Id == instance.ToRoom[phase].Id:
+                            listRoom.append(instance)
+                        if instance.FromRoom[phase] is not None and room.Id == instance.FromRoom[phase].Id:
+                            listRoom.append(instance)
+                listInstance.append(listRoom)
+                result.append(listInstance)
+            return result
+
+        result = GetRoomDoors(familyInstances, rooms, phase)
+        total_doors = sum(len(r[1]) for r in result)
+        print(f"Scanned {len(list(rooms))} rooms, found {total_doors} door/window associations.")
+        return result
+
+
+GetDoorsOrWindowsOfARoomScript.Run(doc)

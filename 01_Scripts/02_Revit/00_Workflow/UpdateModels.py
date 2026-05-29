@@ -1,168 +1,159 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
-import clr
-import sys
-
-sys.path.append("C:\\Program Files (x86)\\IronPython 2.7\\Lib")
-import os
+﻿import clr
 import json
+import System
+from pathlib import Path
+from System import Environment
 
-clr.AddReference('RevitAPI')
-from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
-import Autodesk
-
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
-
-#Import Windows form
+clr.AddReference("RevitAPI")
+clr.AddReference("RevitAPIUI")
 clr.AddReference("System.Windows.Forms")
-# Import System Drawing
 clr.AddReference("System.Drawing")
 
-import System
-from System.Windows.Forms import*
-from System.Drawing import*
-from System.Collections.Generic import List
-from datetime import date
+from Autodesk.Revit.DB import *
+from System.Windows.Forms import *
+from System.Drawing import *
+from Autodesk.Revit.UI import TaskDialog, TaskDialogCommonButtons, TaskDialogIcon
 
-uiapp = __revit__ #type:ignore
-app = __revit__.Application #type:ignore
-uidoc = __revit__.ActiveUIDocument #type:ignore
+uiapp = __revit__  #type:ignore
+app = __revit__.Application
+REVIT_ICON = Path.home() / "AppData" / "Roaming" / "Autodesk" / "ApplicationPlugins" / "Raen.Revit.Pynet.bundle" / "Revit.ico"  #type:ignore
+uidoc = __revit__.ActiveUIDocument  #type:ignore
 doc = uidoc.Document
 
-#endregion
 
-# Sync Transfer Form
+class InputData:
+    @staticmethod
+    def _get_path(app):
+        support_dir = Path(app.CurrentUserAddinsLocation) / "Balio" / "Support"
+        support_dir.mkdir(parents=True, exist_ok=True)
+        return support_dir / "OpenModels.json"
 
-class InputData():
     @staticmethod
     def CreateJson(dictionary):
-        if not os.path.exists(os.path.join(app.CurrentUserAddinsLocation, "Balio\\Support")):
-            os.makedirs(os.path.join(app.CurrentUserAddinsLocation, "Balio\\Support"))
-        path = os.path.join(app.CurrentUserAddinsLocation, "PythonRunner\\Support\\OpenModels.json")
-        with open(path, "w") as file:
-            json.dump(dictionary, file)
+        path = InputData._get_path(app)
+        path.write_text(json.dumps(dictionary))
+
     @staticmethod
     def ReadJson():
         try:
-            path = os.path.join(app.CurrentUserAddinsLocation, "PythonRunner\\Support\\OpenModels.json")
-            with open(path, "r") as file:
-                return json.load(file)
+            path = InputData._get_path(app)
+            return json.loads(path.read_text())
         except:
             return None
 
+
 class UpdateForm(Form):
-    # Update Legends Button
+    def __init__(self, application):
+        super().__init__()
+        self.ConfigureForm(application)
+        self.GenerateFormLabels()
+        data = InputData.ReadJson()
+        if data is not None and Path(data["path"]).is_file():
+            data = DataReader.ReadExcelData(data["path"])
+            self.ModelData = data[1]
+            self.Headers = data[0]
+            self.GenerateFormSelectionList(data[1])
+        else:
+            self.GenerateFormSelectionList(None)
+        self.GenerateTextBox()
+        self.GenerateFormButtons()
+        self.GenerateFormGroups()
+
     def Update(self, sender, args):
-        if self.Selection != None:
+        if self.Selection is not None:
+            modelsData = []
             for data in self.Selection:
-                modelsData = []
-                for data in self.Selection:
-                    for model in self.ModelData:
-                        if (data == model.Model):
-                            modelsData.append(model)
-                
+                for model in self.ModelData:
+                    if data == model.Model:
+                        modelsData.append(model)
             for model in modelsData:
                 document = ModelManager.OpenCloudModel(model, self.Application)
                 ModelManager.SynchronizeModel(document)
                 document.Close(False)
-
-            TaskdialogResults.ShowCorrectTaskDialog()    
+            TaskdialogResults.ShowCorrectTaskDialog()
             self.Close()
-    # Generate Function for Cancel Button		
+
     def Cancel(self, sender, args):
-        if sender.Click:
-            self.DialogResult = DialogResult.Cancel
-            self.Status = "Cancel"
-            
-            TaskdialogResults.ShowCancelTaskDialog()
-            self.Close()    
-    # Browser Button
+        self.DialogResult = DialogResult.Cancel
+        self.Status = "Cancel"
+        TaskdialogResults.ShowCancelTaskDialog()
+        self.Close()
+
     def Browser(self, sender, args):
-        if sender.Click:
-            with OpenFileDialog() as openDialog:
-                openDialog.InitialDirectory = os.path.join(os.path.expanduser('~'), 'Desktop')
-                openDialog.Filter = "Txt files (*.xlsx)|*.xlsx|All files (*.*)|*.*"
-                if openDialog.ShowDialog() == DialogResult.OK:
-                    self.DataPath = openDialog.FileName
-                    data  = DataReader.ReadExcelData(openDialog.FileName)
-                    self.ModelData  = data[1]
-                    self.Headers = data[0]
-                    listControl = [control for control in self.Controls if control.Name == "ModelsList"][0]
-                    self.LoadModelListData(listControl, data[1])
-                    InputData.CreateJson({"path": openDialog.FileName})
-    # Filter Button
+        with OpenFileDialog() as openDialog:
+            desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+            openDialog.InitialDirectory = desktop
+            openDialog.Filter = "Excel files (*.xlsx)|*.xlsx|All files (*.*)|*.*"
+            if openDialog.ShowDialog() == DialogResult.OK:
+                self.DataPath = openDialog.FileName
+                data = DataReader.ReadExcelData(openDialog.FileName)
+                self.ModelData = data[1]
+                self.Headers = data[0]
+                listControl = [control for control in self.Controls if control.Name == "ModelsList"][0]
+                self.LoadModelListData(listControl, data[1])
+                InputData.CreateJson({"path": openDialog.FileName})
+
     def ApplyFilter(self, sender, arg):
         listControl = [control for control in self.Controls if control.Name == "ModelsList"][0]
         rows = listControl.Rows
         if len(sender.Text) > 0:
             for row in rows:
-                if row.Visible == True and sender.Text not in row.Cells[0].Value:
+                if row.Visible and sender.Text not in row.Cells[0].Value:
                     row.Visible = False
-                elif row.Visible == False and sender.Text in row.Cells[0].Value:
+                elif not row.Visible and sender.Text in row.Cells[0].Value:
                     row.Visible = True
         else:
             for row in rows:
                 row.Visible = True
-    # Generate Function to include selected elements in Group Box
+
     def Include(self, sender, args):
-        self.Selection = [row.Cells[0].Value for row in sender.SelectedRows if row.Visible == True]
-    # Windows Form Configuration
+        self.Selection = [row.Cells[0].Value for row in sender.SelectedRows if row.Visible]
+
     def ConfigureForm(self, application):
-    # Include Icon
-    #Generate Tittle Value
         self.Text = "Update models"
-    #Form Variables
+        if REVIT_ICON.exists():
+            self.Icon = Icon(str(REVIT_ICON))
         self.ModelData = None
         self.Headers = ["Model Name", "Description", "Project", "HUB", "Type"]
         self.Application = application
         self.DocumentNames = None
         self.Selection = None
         self.DataPath = None
-    #Window dimension
         self.WindowState = FormWindowState.Normal
-    #Generate Window in Center
         self.CenterToScreen()
-    #Window in front
         self.BringToFront()
         self.Topmost = True
-    #Scale window with resolution
         self.screenSize = Screen.GetWorkingArea(self)
         self.Width = 1000
         self.Height = 650
         self.MinimumSize = Size(1000, 650)
-    #Block Dimension of window
         self.FormBorderStyle = FormBorderStyle.Sizable
-        self.MaximizeBox = True			
-        screenSize = Screen.GetWorkingArea(self)
-    # Windows Form Labels
+        self.MaximizeBox = True
+
     def GenerateFormLabels(self):
-        # Description General
-        labelGeneralDescription = Label(Text = "Select multiple BIM360 or ACC documents to open with closed worksets, Synchronize and close to update the information in the platform.")
-        labelGeneralDescription.Parent = self
-        labelGeneralDescription.Width = 500
-        labelGeneralDescription.Height = 50
-        labelGeneralDescription.Location = Point(20, 10)
-        labelGeneralDescription.Anchor = AnchorStyles.Left | AnchorStyles.Top
-        # Filter Label
-        labelGeneralDescription = Label(Text = "Model name filter: ")
-        labelGeneralDescription.Parent = self
-        labelGeneralDescription.Width = 120
-        labelGeneralDescription.Height = 25
-        labelGeneralDescription.Location = Point(600, 93)
-        labelGeneralDescription.Anchor = AnchorStyles.Right | AnchorStyles.Top
-    # Windows Form Groups
+        label1 = Label()
+        label1.Text = "Select multiple BIM360 or ACC documents to open, synchronize, and close to update the platform."
+        label1.Parent = self
+        label1.Width = 500
+        label1.Height = 50
+        label1.Location = Point(20, 10)
+        label1.Anchor = AnchorStyles.Left | AnchorStyles.Top
+        label2 = Label()
+        label2.Text = "Model name filter: "
+        label2.Parent = self
+        label2.Width = 120
+        label2.Height = 25
+        label2.Location = Point(600, 93)
+        label2.Anchor = AnchorStyles.Right | AnchorStyles.Top
+
     def GenerateFormGroups(self):
-        # Generate Group Views	
         groupBoxViews = GroupBox()
         groupBoxViews.Text = "Models to update"
         groupBoxViews.Size = Size(950, 490)
         groupBoxViews.Location = Point(20, 60)
         groupBoxViews.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom | AnchorStyles.Top
         groupBoxViews.Parent = self
-    # Windows Form Datagrid
+
     def GenerateFormSelectionList(self, documents):
         dataGrid = DataGridView()
         dataGrid.Name = "ModelsList"
@@ -182,11 +173,11 @@ class UpdateForm(Form):
         for count in range(len(self.Headers)):
             dataGrid.Columns[count].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
             dataGrid.Columns[count].HeaderCell.Value = self.Headers[count]
-        if documents != None:
+        if documents is not None:
             self.LoadModelListData(dataGrid, documents)
         dataGrid.SelectionChanged += self.Include
         self.Controls.Add(dataGrid)
-    # Load Data in Datagrid View 
+
     def LoadModelListData(self, dataGrid, documents):
         dataGrid.Rows.Clear()
         for count in range(len(documents)):
@@ -197,9 +188,8 @@ class UpdateForm(Form):
             row.Cells[2].Value = documents[count].Project
             row.Cells[3].Value = documents[count].Hub
             row.Cells[4].Value = documents[count].Type
-    # Windows Form Buttons
+
     def GenerateFormButtons(self):
-        # Generate Browser Button
         buttonBrowser = Button()
         buttonBrowser.Width = 120
         buttonBrowser.Text = "Browse Data"
@@ -207,7 +197,6 @@ class UpdateForm(Form):
         buttonBrowser.Anchor = AnchorStyles.Left | AnchorStyles.Bottom
         buttonBrowser.Click += self.Browser
         self.Controls.Add(buttonBrowser)
-        # Generate Update Button
         buttonUpdate = Button()
         buttonUpdate.Text = "Update"
         buttonUpdate.Width = 120
@@ -215,7 +204,6 @@ class UpdateForm(Form):
         buttonUpdate.Anchor = AnchorStyles.Right | AnchorStyles.Bottom
         buttonUpdate.Click += self.Update
         self.Controls.Add(buttonUpdate)
-    # Generate Cancel Button
         buttonCancel = Button()
         buttonCancel.Width = 120
         buttonCancel.Text = "Cancel"
@@ -223,7 +211,7 @@ class UpdateForm(Form):
         buttonCancel.Anchor = AnchorStyles.Right | AnchorStyles.Bottom
         buttonCancel.Click += self.Cancel
         self.Controls.Add(buttonCancel)
-    # Windows Form Text Box
+
     def GenerateTextBox(self):
         textBox = TextBox()
         textBox.Location = Point(725, 90)
@@ -231,23 +219,9 @@ class UpdateForm(Form):
         textBox.Anchor = AnchorStyles.Right | AnchorStyles.Top
         textBox.TextChanged += self.ApplyFilter
         self.Controls.Add(textBox)
-    # Constructor Class
-    def __init__(self, application):
-        self.ConfigureForm(application)
-        self.GenerateFormLabels()
-        data = InputData.ReadJson()
-        if data != None and os.path.isfile(data["path"]):
-            data = DataReader.ReadExcelData(data["path"])
-            self.ModelData  = data[1]
-            self.Headers = data[0]
-            self.GenerateFormSelectionList(data[1])
-        else:
-            self.GenerateFormSelectionList(None)
-        self.GenerateTextBox()        
-        self.GenerateFormButtons()
-        self.GenerateFormGroups()
 
-class ModelData():
+
+class ModelData:
     def __init__(self, model, description, project, hub, type, projectGuid, modelGuid):
         self.modelName = model
         self.description = description
@@ -256,57 +230,72 @@ class ModelData():
         self.type = type
         self.projectGuid = projectGuid
         self.modelGuid = modelGuid
+
     @property
     def Model(self):
         return self.modelName
+
     @property
     def Description(self):
         return self.description
+
     @property
     def Project(self):
         return self.projectName
+
     @property
     def Hub(self):
         return self.hub
+
     @property
     def Type(self):
         return self.type
+
     @property
     def ProjectGuid(self):
         return self.projectGuid
+
     @property
     def ModelGuid(self):
         return self.modelGuid
 
-class DataReader():
+
+class DataReader:
     @staticmethod
     def ReadExcelData(path):
-
         return None
 
-class ModelManager():
+
+class SyncLockCallback(ICentralLockedCallback):
+    def ShouldWaitForLockAvailability(self):
+        return False
+
+
+class ModelManager:
     @staticmethod
     def OpenCloudModel(modelData, application):
         if modelData.Model not in ModelManager.GetModels(application):
             projectGuid = System.Guid(modelData.ProjectGuid)
-            modelGuid = System.Guid(modelData.ModelGuid)       
+            modelGuid = System.Guid(modelData.ModelGuid)
             options = OpenOptions()
             openConfiguration = WorksetConfiguration(WorksetConfigurationOption.OpenLastViewed)
             options.SetOpenWorksetsConfiguration(openConfiguration)
             try:
                 modelPath = ModelPathUtils.ConvertCloudGUIDsToCloudPath(ModelPathUtils.CloudRegionEMEA, projectGuid, modelGuid)
                 document = application.Application.OpenDocumentFile(modelPath, options)
-                print("Document opened: {name}".format(name = document.Title))
+                print("Document opened: {name}".format(name=document.Title))
                 return document
             except:
                 modelPath = ModelPathUtils.ConvertCloudGUIDsToCloudPath(ModelPathUtils.CloudRegionUS, projectGuid, modelGuid)
                 document = application.Application.OpenDocumentFile(modelPath, options)
-                print("Document opened: {name}".format(name = document.Title))
+                print("Document opened: {name}".format(name=document.Title))
                 return document
+
     @staticmethod
     def GetModels(application):
         documents = application.Application.Documents
-        return [document.Title + ".rvt" for document in documents if document.IsLinked == False]
+        return [document.Title + ".rvt" for document in documents if not document.IsLinked]
+
     @staticmethod
     def SynchronizeModel(document):
         transactWithCentralOptions = TransactWithCentralOptions()
@@ -321,13 +310,11 @@ class ModelManager():
         relinquishOptions.ViewWorksets = True
         synchronizeWithCentralOptions.SetRelinquishOptions(relinquishOptions)
         synchronizeWithCentralOptions.Comment = "Python Runner synchronize"
-
         document.SynchronizeWithCentral(transactWithCentralOptions, synchronizeWithCentralOptions)
-        print("Document synchronized: {name}".format(name = document.Title))
+        print("Document synchronized: {name}".format(name=document.Title))
 
-# Generate TaskDialog Options Class
+
 class TaskdialogResults:
-# Define Show Cancel TaskDialog Method
     @staticmethod
     def ShowCancelTaskDialog():
         dialog = TaskDialog("Update models")
@@ -337,7 +324,7 @@ class TaskdialogResults:
         dialog.CommonButtons = TaskDialogCommonButtons.Ok
         dialog.MainIcon = TaskDialogIcon.TaskDialogIconWarning
         dialog.Show()
-# Define Show Process Finish TaskDialog Method
+
     @staticmethod
     def ShowCorrectTaskDialog():
         dialog = TaskDialog("Update models")
@@ -348,9 +335,6 @@ class TaskdialogResults:
         dialog.MainIcon = TaskDialogIcon.TaskDialogIconInformation
         dialog.Show()
 
-class SyncLockCallback(ICentralLockedCallback):
-    def ShouldWaitForLockAvailability(self):
-        return False
 
-
+print("Opening Update Models dialog...")
 UpdateForm(uiapp).ShowDialog()

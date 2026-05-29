@@ -1,75 +1,41 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
 import clr
 
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+doc = __revit__.ActiveUIDocument.Document  #type:ignore
 
-from System.Collections.Generic import List
+LEVEL_COUNT = 5
+FLOOR_HEIGHT_M = 3.0
+BASE_ELEVATION_M = 0.0
+LEVEL_PREFIX = "Level_RNM_"
 
-#Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
 
-from System.Windows.Forms import*
-from System.Drawing import*
+def m_to_ft(meters):
+    return UnitUtils.ConvertToInternalUnits(meters, UnitTypeId.Meters)
 
-uidoc = __revit__.ActiveUIDocument #type:ignore
-doc = uidoc.Document
 
-from difflib import SequenceMatcher
+class CreateLevelsScript:
+    @staticmethod
+    def Run(doc):
+        t = Transaction(doc, "PyNET - Create Levels")
+        t.Start()
+        try:
+            levels = []
+            for i in range(LEVEL_COUNT):
+                elevation = m_to_ft(BASE_ELEVATION_M + i * FLOOR_HEIGHT_M)
+                level = Level.Create(doc, elevation)
+                level.Name = f"{LEVEL_PREFIX}{i}"
+                levels.append(level)
+            t.Commit()
+        except:
+            t.RollBack()
+            raise
 
-#endregion
-elevation = 0.0
-levelsRange = range(0, 5)
-levelDiference = 3.0
+        print(f"Created {len(levels)} levels with prefix '{LEVEL_PREFIX}'.")
+        for lvl in levels:
+            elev_m = UnitUtils.ConvertFromInternalUnits(lvl.Elevation, UnitTypeId.Meters)
+            print(f"  {lvl.Name}: {elev_m:.2f} m")
 
-def ConvertUnits(value, unitName, bool = True):
-    # Get All Units
-    units = UnitUtils.GetAllUnits()
-    unit = None
-    # Search a Unit Almost Equal to Input
-    for unit in units:
-        name = UnitUtils.GetTypeCatalogStringForUnit(unit)
-        ratio = SequenceMatcher(a = name, b = unitName.ToUpper()).ratio()
-        if ratio > 0.85:
-            unitFilter = unit
-            break
-        else:
-            pass
-    # Convert Unit if Unit is Diferent to None
-    if unitFilter != None:
-        if bool == True:
-            result = UnitUtils.ConvertToInternalUnits(value, unitFilter)
-            name = UnitUtils.GetTypeCatalogStringForUnit(unit)
-        if bool == False:
-            result = UnitUtils.ConvertFromInternalUnits(value, unitFilter)
-            name = UnitUtils.GetTypeCatalogStringForUnit(unit)
-        return result
-    # If Unit Filter None Return None
-    elif unitFilter == None:
-        return None
 
-def GenerateLevels(range, elevation, distance, prefix):
-    levels = []
-    for value in range:
-        level = Level.Create(doc, ConvertUnits(elevation, "meters"))
-        level.Name = prefix + str(value)
-        levels.append(level)
-        elevation += distance
-    return levels
-
-with Transaction(doc) as tx:
-    tx.Start("Generate Levels")
-
-    levels = GenerateLevels(levelsRange, elevation, levelDiference, "Level_RNM_")
-
-    tx.Commit()
-
-OUT = levels
+CreateLevelsScript.Run(doc)

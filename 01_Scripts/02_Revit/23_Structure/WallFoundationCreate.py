@@ -1,68 +1,46 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
-import string
-import sys
 import clr
 
-clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
-
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
+from Autodesk.Revit.DB.Structure import WallFoundationType, WallFoundation
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+doc = __revit__.ActiveUIDocument.Document  #type:ignore
 
-clr.AddReference('RevitNodes')
-import Revit
-clr.ImportExtensions(Revit.GeometryConversion)
-clr.ImportExtensions(Revit.Elements)
 
-clr.AddReference('RevitServices')
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
-from System.Collections.Generic import List
+class WallFoundationCreateScript:
+    @staticmethod
+    def Run(doc):
+        walls = (FilteredElementCollector(doc)
+                 .OfClass(Wall).WhereElementIsNotElementType().ToElements())
 
-doc = DocumentManager.Instance.CurrentDBDocument
-uiapp = DocumentManager.Instance.CurrentUIApplication
-app = uiapp.Application
-uidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument
+        foundation_type_id = (FilteredElementCollector(doc)
+                              .OfClass(WallFoundationType)
+                              .FirstElementId())
 
-# Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
+        if foundation_type_id == ElementId.InvalidElementId:
+            print("No wall foundation type found in project.")
+            return
 
-import System
-from System.Windows.Forms import*
-from System.Drawing import*
+        if not walls:
+            print("No walls found in project.")
+            return
 
-# Analyze the Coincidence of the Unit Names
-from difflib import SequenceMatcher
+        t = Transaction(doc, "PyNET - Create Wall Foundations")
+        t.Start()
+        try:
+            foundations = []
+            for wall in walls:
+                try:
+                    wf = WallFoundation.Create(doc, foundation_type_id, wall.Id)
+                    foundations.append(wf)
+                except Exception:
+                    pass
+            t.Commit()
+        except:
+            t.RollBack()
+            raise
 
-#endregion
+        print(f"Created {len(foundations)} wall foundations from {len(list(walls))} walls.")
 
-#region Generate Wall Foundations
 
-# Collect Walls
-walls = FilteredElementCollector(doc).OfClass(Wall).WhereElementIsNotElementType().ToElements()
-# Get Wall Types
-wallFoundationType = FilteredElementCollector(doc).OfClass(WallFoundationType).FirstElementId()
-
-# Generate Transaction Create Wall Foundations
-with Transaction(doc) as tx:
-    tx.Start("Create Wall Foundations")
-
-    wallFoundations = []
-    for wall in walls:
-        wallFoundation = WallFoundation.Create(doc, wallFoundationType, wall.Id)
-        wallFoundations.append(wallFoundation)
-
-    tx.Commit()
-
-OUT = wallFoundations
-
-#endregion
+WallFoundationCreateScript.Run(doc)

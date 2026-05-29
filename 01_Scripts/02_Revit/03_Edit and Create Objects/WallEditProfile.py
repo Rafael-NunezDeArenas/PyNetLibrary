@@ -1,67 +1,37 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
-import string
-import sys
 import clr
 
-clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
-
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+doc = __revit__.ActiveUIDocument.Document  #type:ignore
 
-clr.AddReference('RevitNodes')
-import Revit
-clr.ImportExtensions(Revit.GeometryConversion)
-clr.ImportExtensions(Revit.Elements)
 
-clr.AddReference('RevitServices')
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
-from System.Collections.Generic import List
+class WallEditProfileScript:
+    @staticmethod
+    def Run(doc):
+        walls = FilteredElementCollector(doc).OfClass(Wall).WhereElementIsNotElementType().ToElements()
+        walls_with_profile = [w for w in walls if w.IsProfileSketchDriven]
 
-doc = DocumentManager.Instance.CurrentDBDocument
-uiapp = DocumentManager.Instance.CurrentUIApplication
-app = uiapp.Application
-uidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument
+        if not walls_with_profile:
+            print("No walls with edited profiles found.")
+            return
 
-# Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
-
-import System
-from System.Windows.Forms import*
-from System.Drawing import*
-
-# Analyze the Coincidence of the Unit Names
-from difflib import SequenceMatcher
-
-#endregion
-
-#region remove profile editions. Available in Revit API 2022 and next Versions
-
-# Collect Walls
-walls = FilteredElementCollector(doc).OfClass(WallType).WhereElementIsNotElementType().ToElements()
-
-# Transaction Remove Wall Profile
-with Transaction(doc) as tx:
-    tx.Start("Remove Wall Profiles")
-
-    for wall in walls:
+        t = Transaction(doc, "Remove Wall Profiles")
+        t.Start()
         try:
-            wall.RemoveProfileSketch()
+            removed = 0
+            for wall in walls_with_profile:
+                try:
+                    wall.RemoveProfileSketch()
+                    removed += 1
+                except Exception:
+                    pass
+            t.Commit()
         except:
-            pass
+            t.RollBack()
+            raise
 
-    tx.Commit()
+        print(f"Removed profile edits from {removed}/{len(walls_with_profile)} walls.")
 
-OUT = "Remove Profile Edition"
 
-#endregion
+WallEditProfileScript.Run(doc)

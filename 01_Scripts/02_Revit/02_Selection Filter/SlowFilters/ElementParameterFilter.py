@@ -1,89 +1,46 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
-import string
-import sys
 import clr
 
-clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
+clr.AddReference("RevitAPI")
+clr.AddReference("RevitAPIUI")
 
-clr.AddReference('RevitAPI')
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+uidoc = __revit__.ActiveUIDocument  #type:ignore
+doc = uidoc.Document
 
-clr.AddReference('RevitNodes')
-import Revit
-clr.ImportExtensions(Revit.GeometryConversion)
-clr.ImportExtensions(Revit.Elements)
+PARAMETER_NAME = "parameter_01"
+PARAMETER_VALUE = "Revit API"
+MIN_AREA_SQM = 10
 
-clr.AddReference('RevitServices')
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
-from System.Collections.Generic import List
 
-doc = DocumentManager.Instance.CurrentDBDocument
-uiapp = DocumentManager.Instance.CurrentUIApplication
-app = uiapp.Application
-uidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument
+class ElementParameterFilterScript:
+    @staticmethod
+    def Run(doc):
+        provider = ParameterValueProvider(ElementId(BuiltInParameter.ROOM_AREA))
+        evaluator = FilterNumericGreater()
+        value = UnitUtils.ConvertToInternalUnits(MIN_AREA_SQM, UnitTypeId.SquareMeters)  #type:ignore
+        rule = FilterDoubleRule(provider, evaluator, value, 0.001)
+        filterBuiltIn = ElementParameterFilter(rule)
+        collectorNativeParameter = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Rooms).WherePasses(filterBuiltIn).ToElements()
 
-# Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
+        iterator = doc.ParameterBindings.ForwardIterator()
+        iterator.Reset()
+        providerProject = None
+        while iterator.MoveNext():
+            if iterator.Key.Name == PARAMETER_NAME:
+                providerProject = ParameterValueProvider(iterator.Key.Id)
+                break
 
-import System
-from System.Windows.Forms import*
-from System.Drawing import*
+        collectorProjectParameter = []
+        if providerProject is not None:
+            evaluatorStr = FilterStringEquals()
+            ruleStr = FilterStringRule(providerProject, evaluatorStr, PARAMETER_VALUE, True)
+            filterProject = ElementParameterFilter(ruleStr)
+            collectorProjectParameter = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Rooms).WherePasses(filterProject).ToElements()
 
-clr.AddReference('System')
-from System.Collections.Generic import List
+        print(f"Rooms with area > {MIN_AREA_SQM}sqm: {len(collectorNativeParameter)}")
+        print(f"Rooms with {PARAMETER_NAME} = '{PARAMETER_VALUE}': {len(collectorProjectParameter)}")
+        return list(collectorNativeParameter), list(collectorProjectParameter)
 
-#endregion
 
-#region Element Parameter Filter. BuiltInParameter Parameter
-
-# Create Evaluation Rule
-provider = ParameterValueProvider(ElementId(BuiltInParameter.ROOM_AREA))
-evaluator = FilterNumericGreater()
-value = UnitUtils.ConvertToInternalUnits(10, UnitTypeId.Meters) #type: ignore
-rule = FilterDoubleRule(provider, evaluator, value, 0.001)
-
-# Create Filter
-filter = ElementParameterFilter(rule)
-
-# Collect Elements
-collectorNativeParamater = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Rooms).WherePasses(filter).ToElements()
-
-#endregion
-
-#region Element Parameter Filter. Project Parameter
-
-# Get Project parameter
-iterator = doc.ParameterBindings.ForwardIterator()
-iterator.Reset()
-provider = None
-while iterator.MoveNext():
-    name = iterator.Key.Name
-    if name == "parameter_01":
-        provider = ParameterValueProvider(iterator.Key.Id)
-        break
-
-# Create Evaluation Rule
-evaluator = FilterStringEquals()
-value = "Revit API"
-rule = FilterStringRule(provider, evaluator, value, True)
-
-# Create Filter
-filter = ElementParameterFilter(rule)
-
-# Collect Elements
-collectorProjectParameter = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Rooms).WherePasses(filter).ToElements()
-
-OUT = collectorNativeParamater, collectorProjectParameter
-
-#endregion
+ElementParameterFilterScript.Run(doc)

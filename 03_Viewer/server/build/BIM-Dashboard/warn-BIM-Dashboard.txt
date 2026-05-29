@@ -30,7 +30,7 @@ excluded module named _frozen_importlib - imported by importlib (optional), impo
 missing module named urllib.unquote - imported by urllib (conditional), bottle (conditional)
 missing module named urllib.quote - imported by urllib (conditional), bottle (conditional)
 missing module named urllib.urlencode - imported by urllib (conditional), bottle (conditional)
-missing module named posix - imported by os (conditional, optional), importlib._bootstrap_external (conditional), shutil (conditional)
+missing module named posix - imported by shutil (conditional), importlib._bootstrap_external (conditional), os (conditional, optional)
 missing module named resource - imported by posix (top-level)
 missing module named multiprocessing.get_context - imported by multiprocessing (top-level), multiprocessing.pool (top-level), multiprocessing.managers (top-level), multiprocessing.sharedctypes (top-level)
 missing module named multiprocessing.TimeoutError - imported by multiprocessing (top-level), multiprocessing.pool (top-level)
