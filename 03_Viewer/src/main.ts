@@ -182,14 +182,14 @@ highlighter.events.select.onClear.add(() => {
 highlighter.styles.set("clash-a", {
   color: new THREE.Color(0xff3333),
   renderedFaces: FRAGS.RenderedFaces.TWO,
-  opacity: 1,
-  transparent: false,
+  opacity: 0.55,
+  transparent: true,
 });
 highlighter.styles.set("clash-b", {
   color: new THREE.Color(0x33dd55),
   renderedFaces: FRAGS.RenderedFaces.TWO,
-  opacity: 1,
-  transparent: false,
+  opacity: 0.55,
+  transparent: true,
 });
 
 highlighter.events["clash-a"].onHighlight.add((map) => {

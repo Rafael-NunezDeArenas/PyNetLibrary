@@ -1,45 +1,28 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
 import clr
 
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
+clr.AddReference("RevitAPIUI")
+
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
-
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
-
 from System.Collections.Generic import List
 
-#Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
-
-from System.Windows.Forms import*
-from System.Drawing import*
-
-uidoc = __revit__.ActiveUIDocument #type:ignore
+uidoc = __revit__.ActiveUIDocument  #type:ignore
 doc = uidoc.Document
 
-# endregion
 
-# region Logical Or Filter
+class LogicalOrFilterScript:
+    @staticmethod
+    def Run(doc):
+        doorsFilter = ElementCategoryFilter(BuiltInCategory.OST_Doors)
+        windowsFilter = ElementCategoryFilter(BuiltInCategory.OST_Windows)
 
-# Element Category Door
-doorsFilter = ElementCategoryFilter(BuiltInCategory.OST_Doors)
+        filters = List[ElementFilter]([doorsFilter, windowsFilter])
+        logicalFilter = LogicalOrFilter(filters)
 
-# Element Category Windows
-windowsFilter = ElementCategoryFilter(BuiltInCategory.OST_Windows)
+        collector = FilteredElementCollector(doc).WherePasses(logicalFilter).ToElements()
 
-# Logical Or Filter
-filters = List[ElementFilter]([doorsFilter, windowsFilter])
-logicalFilter = LogicalOrFilter(filters)
+        print(f"Found {len(collector)} Door/Window element(s) via LogicalOrFilter.")
+        return list(collector)
 
-# Collect Elements
-collector = FilteredElementCollector(doc).WherePasses(logicalFilter).ToElements()
 
-OUT = collector 
-
-# endregion
+LogicalOrFilterScript.Run(doc)

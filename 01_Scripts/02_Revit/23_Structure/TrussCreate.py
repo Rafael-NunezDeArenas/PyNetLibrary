@@ -1,71 +1,46 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
-import string
-import sys
 import clr
 
-clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
-
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.DB.Structure import TrussType, Truss
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+doc = __revit__.ActiveUIDocument.Document  #type:ignore
 
-clr.AddReference('RevitNodes')
-import Revit
-clr.ImportExtensions(Revit.GeometryConversion)
-clr.ImportExtensions(Revit.Elements)
 
-clr.AddReference('RevitServices')
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
-from System.Collections.Generic import List
+class TrussCreateScript:
+    @staticmethod
+    def Run(doc):
+        grids = (FilteredElementCollector(doc)
+                 .OfClass(Grid).WhereElementIsNotElementType().ToElements())
 
-doc = DocumentManager.Instance.CurrentDBDocument
-uiapp = DocumentManager.Instance.CurrentUIApplication
-app = uiapp.Application
-uidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument
+        truss_type_id = (FilteredElementCollector(doc)
+                         .OfClass(FamilySymbol)
+                         .WherePasses(ElementCategoryFilter(BuiltInCategory.OST_Truss))
+                         .FirstElementId())
 
-# Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
+        if truss_type_id == ElementId.InvalidElementId:
+            print("No truss family loaded in project.")
+            return
 
-import System
-from System.Windows.Forms import*
-from System.Drawing import*
+        if not grids:
+            print("No grids found in project.")
+            return
 
-# Analyze the Coincidence of the Unit Names
-from difflib import SequenceMatcher
+        t = Transaction(doc, "PyNET - Create Trusses")
+        t.Start()
+        try:
+            trusses = []
+            for grid in grids:
+                curve = grid.Curve
+                plane = SketchPlane.Create(doc, grid.Id)
+                truss = Truss.Create(doc, truss_type_id, plane.Id, curve)
+                trusses.append(truss)
+            t.Commit()
+        except:
+            t.RollBack()
+            raise
 
-#endregion
+        print(f"Created {len(trusses)} trusses from {len(list(grids))} grids.")
 
-#region Create truss Based in Grid
 
-# Collect Grids
-grids = FilteredElementCollector(doc).OfClass(Grid).WhereElementIsNotElementType().ToElements()
-# Get Truss Type
-filter = ElementCategoryFilter(BuiltInCategory.OST_Truss)
-trussTypeId = FilteredElementCollector(doc).OfClass(FamilySymbol).WherePasses(filter).FirstElementId()
-
-# Generate Transaction Create Truss
-with Transaction(doc) as tx:
-    tx.Start("Create Trusses")
-
-    trusses = []
-    for grid in grids:
-        curve = grid.Curve
-        plane = SketchPlane.Create(doc, grid.Id)
-        truss = Truss.Create(doc, trussTypeId, plane.Id, curve)
-        trusses.append(truss)
-
-    tx.Commit()
-
-OUT = trussTypeId
-
-#endregion
+TrussCreateScript.Run(doc)

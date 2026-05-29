@@ -170,7 +170,7 @@ class ElementExtractor:
     def _make_result(self, item) -> tuple:
         ft    = FEET_TO_METERS
         verts = [[v[0] * ft, v[1] * ft, v[2] * ft] for v in self._collector.Vertices]
-        faces = [list(f) for f in self._collector.Faces]
+        faces = [[f[0]+1, f[1]+1, f[2]+1] for f in self._collector.Faces]  # IFC4 is 1-based
         return (self._item_name(item), verts, faces,
                 self._item_color(item), self._item_material(item), self._item_props(item))
 

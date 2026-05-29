@@ -1,71 +1,44 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
-import string
-import sys
-from tokenize import Ignore
 import clr
 
-clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
-
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+doc = __revit__.ActiveUIDocument.Document  #type:ignore
 
-clr.AddReference('RevitNodes')
-import Revit
-clr.ImportExtensions(Revit.GeometryConversion)
-clr.ImportExtensions(Revit.Elements)
 
-clr.AddReference('RevitServices')
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
-from System.Collections.Generic import List
+def m_to_ft(meters):
+    return UnitUtils.ConvertToInternalUnits(meters, UnitTypeId.Meters)
 
-doc = DocumentManager.Instance.CurrentDBDocument
-uiapp = DocumentManager.Instance.CurrentUIApplication
-app = uiapp.Application
-uidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument
 
-# Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
+class ProjectPositionScript:
+    @staticmethod
+    def Run(doc):
+        collector = FilteredElementCollector(doc).OfClass(InternalOrigin).ToElements()  # type:ignore
+        internal_origin = next((p for p in collector), None)
+        if internal_origin is None:
+            print("Internal origin not found.")
+            return
 
-import System
-from System.Windows.Forms import*
-from System.Drawing import*
+        internal_point = internal_origin.Position
+        project_location = doc.ActiveProjectLocation
+        current_pos = project_location.GetProjectPosition(internal_point)
 
-#endregion
+        print(f"Current position: E={current_pos.EastWest:.3f} N={current_pos.NorthSouth:.3f} "
+              f"Elev={current_pos.Elevation:.3f} Angle={current_pos.Angle:.4f} rad")
 
-def ConvertUnits(value):
-    result = UnitUtils.ConvertToInternalUnits(value, UnitTypeId.Meters) #type:ignore
-    return result
+        # Example: set a new project position (60m E, 50m N, 30m elev, 0.5 rad angle)
+        new_pos = ProjectPosition(m_to_ft(60), m_to_ft(50), m_to_ft(30), 0.5)
 
-# Get Internal Origin
-collector = FilteredElementCollector(doc).OfClass(InternalOrigin).ToElements() #type:ignore
-internalOrigin = next ((point for point in collector if point.__class__ == InternalOrigin), None) #type:ignore
-internalPoint = internalOrigin.Position
-internalSharedPoint = internalOrigin.SharedPosition
+        t = Transaction(doc, "PyNET - Set Project Position")
+        t.Start()
+        try:
+            project_location.SetProjectPosition(internal_point, new_pos)
+            t.Commit()
+        except:
+            t.RollBack()
+            raise
 
-# Get the Project Location
-projectLocation = doc.ActiveProjectLocation
-projectPosition = projectLocation.GetProjectPosition(internalPoint)
+        print("Project position updated.")
 
-# Create New Project Position
-newProjectPosition = doc.Application.Create.NewProjectPosition(ConvertUnits(60), ConvertUnits(50), ConvertUnits(30), 0.5)
 
-# Create Transaction Modify Project Position
-TransactionManager.Instance.EnsureInTransaction(doc)
-
-if None != newProjectPosition:
-    projectLocation.SetProjectPosition(internalPoint, newProjectPosition)
-    
-TransactionManager.Instance.TransactionTaskDone()
-
-OUT = "Process Finished"
+ProjectPositionScript.Run(doc)

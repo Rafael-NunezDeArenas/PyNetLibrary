@@ -1,65 +1,42 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
-from platform import system_alias
-import string
-import sys
 import clr
 
-clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
-
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 from Autodesk.Revit.DB.Electrical import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
-
-clr.AddReference('RevitNodes')
-import Revit
-clr.ImportExtensions(Revit.GeometryConversion)
-clr.ImportExtensions(Revit.Elements)
-
-clr.AddReference('RevitServices')
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
-from System.Collections.Generic import List
-
-doc = DocumentManager.Instance.CurrentDBDocument
-uiapp = DocumentManager.Instance.CurrentUIApplication
-app = uiapp.Application
-uidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument
-
-# Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
-
-import System
-from System.Windows.Forms import*
-from System.Drawing import*
-
-# Analyze the Coincidence of the Unit Names
-from difflib import SequenceMatcher
-
-#endregion
+doc = __revit__.ActiveUIDocument.Document  #type:ignore
 
 
-electricalSystems = FilteredElementCollector(doc).OfClass(ElectricalSystem).ToElements()
+class ElectricalWireCreateScript:
+    @staticmethod
+    def Run(doc):
+        if doc.ActiveView.__class__ != ViewPlan:
+            print("Active view is not a floor plan. Wires require a plan view.")
+            return
 
-with Transaction(doc) as tx:
-    tx.Start("Generate Wires in Active View")
+        electrical_systems = (FilteredElementCollector(doc)
+                               .OfClass(ElectricalSystem).ToElements())
 
-    for electricalSystem in electricalSystems:
-        if doc.ActiveView.__class__ == ViewPlan:
-            electricalSystem.NewWires(doc.ActiveView, WiringType.Arc)
+        if not electrical_systems:
+            print("No electrical systems found in project.")
+            return
 
-    tx.Commit()
+        t = Transaction(doc, "PyNET - Create Wires")
+        t.Start()
+        try:
+            created = 0
+            for system in electrical_systems:
+                try:
+                    system.NewWires(doc.ActiveView, WiringType.Arc)
+                    created += 1
+                except Exception:
+                    pass
+            t.Commit()
+        except:
+            t.RollBack()
+            raise
 
-if doc.ActiveView.__class__ != ViewPlan:
-    OUT = "Not possible to create Wires, active view is not View Plan"
+        print(f"Created wires for {created}/{len(list(electrical_systems))} electrical systems.")
 
-OUT = "Wires Created in Active View"
+
+ElectricalWireCreateScript.Run(doc)

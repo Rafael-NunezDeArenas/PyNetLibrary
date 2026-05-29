@@ -1,47 +1,31 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
 import clr
 
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+doc = __revit__.ActiveUIDocument.Document  #type:ignore
 
-from System.Collections.Generic import List
-
-#Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
-
-from System.Windows.Forms import*
-from System.Drawing import*
-
-uidoc = __revit__.ActiveUIDocument #type:ignore
-doc = uidoc.Document
-
-# endregion
+TARGET_PARAM_NAME = "ExportParam"
 
 
-#region Transaction
+class GetCategoriesOfProjectParameterScript:
+    @staticmethod
+    def Run(doc, param_name):
+        bindings = doc.ParameterBindings
+        iterator = bindings.ForwardIterator()
 
-parameters = doc.ParameterBindings
-iterator = parameters.ForwardIterator()
+        while iterator.MoveNext():
+            if iterator.Key.Name == param_name:
+                element_binding = bindings.get_Item(iterator.Key)
+                categories = element_binding.Categories
+                names = sorted([cat.Name for cat in categories])
+                print(f"Parameter '{param_name}' is bound to {len(names)} categories:")
+                for name in names:
+                    print(f"  {name}")
+                return names
 
-while iterator.MoveNext():
-    name = iterator.Key.Name
-    if name == "ExportParam":
-        definition = iterator.Key
-        if parameters.Contains(definition):
-            elementBinding = parameters.get_Item(definition)
-            categories = elementBinding.Categories
-            break
+        print(f"Parameter '{param_name}' not found in project parameters.")
+        return []
 
-names = [category.Name for category in categories]
 
-OUT = names
-
-#endregion
+GetCategoriesOfProjectParameterScript.Run(doc, TARGET_PARAM_NAME)

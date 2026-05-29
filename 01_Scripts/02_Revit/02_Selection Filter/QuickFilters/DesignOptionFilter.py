@@ -1,62 +1,28 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
-import string
-import sys
 import clr
 
-clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
+clr.AddReference("RevitAPI")
+clr.AddReference("RevitAPIUI")
 
-clr.AddReference('RevitAPI')
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
-
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
-
-clr.AddReference('RevitNodes')
-import Revit
-clr.ImportExtensions(Revit.GeometryConversion)
-clr.ImportExtensions(Revit.Elements)
-
-clr.AddReference('RevitServices')
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
 from System.Collections.Generic import List
 
-doc = DocumentManager.Instance.CurrentDBDocument
-uiapp = DocumentManager.Instance.CurrentUIApplication
-app = uiapp.Application
-uidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument
+uidoc = __revit__.ActiveUIDocument  #type:ignore
+doc = uidoc.Document
 
-# Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
 
-import System
-from System.Windows.Forms import*
-from System.Drawing import*
+class DesignOptionFilterScript:
+    @staticmethod
+    def Run(doc, uidoc):
+        option = DesignOption.GetActiveDesignOptionFilterId(doc)
+        designOptionFilter = ElementDesignOptionFilter(option)
+        collectorFilter = FilteredElementCollector(doc).WherePasses(designOptionFilter).ToElements()
 
-clr.AddReference('System')
-from System.Collections.Generic import List
+        ids = List[ElementId]([n.Id for n in collectorFilter])
+        uidoc.Selection.SetElementIds(ids)
+        uidoc.ShowElements(ids)
 
-#endregion
+        print(f"Found {len(collectorFilter)} element(s) in the active design option.")
+        return list(collectorFilter)
 
-#region Design Option Filter
 
-# This Design Option Filter accept a Inverse including true
-option = DesignOption.GetActiveDesignOptionFilterId(doc)
-designOptionFilter = ElementDesignOptionFilter(option)
-collectorFilter = FilteredElementCollector(doc).WherePasses(designOptionFilter).ToElements()
-
-# Show Elements in Revit
-ids = List[ElementId]([n.Id for n in collectorFilter])
-uidoc.Selection.SetElementIds(ids)
-uidoc.ShowElements(ids)
-
-OUT = collectorFilter
-
-#endregion
+DesignOptionFilterScript.Run(doc, uidoc)

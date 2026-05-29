@@ -1,74 +1,40 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
-import string
-import sys
 import clr
 
-clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
-
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+doc = __revit__.ActiveUIDocument.Document  #type:ignore
 
-clr.AddReference('RevitNodes')
-import Revit
-clr.ImportExtensions(Revit.GeometryConversion)
-clr.ImportExtensions(Revit.Elements)
-
-clr.AddReference('RevitServices')
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
-from System.Collections.Generic import List
-
-doc = DocumentManager.Instance.CurrentDBDocument
-uiapp = DocumentManager.Instance.CurrentUIApplication
-app = uiapp.Application
-uidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument
-
-# Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
-
-import System
-from System.Windows.Forms import*
-from System.Drawing import*
-
-# Analyze the Coincidence of the Unit Names
-from difflib import SequenceMatcher
-
-#endregion
-
-#region rotate Element
-
-# Get Family Instance
-instanceId = FilteredElementCollector(doc).OfClass(FamilyInstance).FirstElementId()
-
-element = doc.GetElement(instanceId)
 
 def GetCentroid(element):
     box = element.get_BoundingBox(None)
     maxPoint = box.Max
     minPoint = box.Min
-    centroid = XYZ((maxPoint.X + minPoint.X)/2, (maxPoint.Y + minPoint.Y)/2, (maxPoint.Z + minPoint.Z)/2)
-    return centroid
+    return XYZ((maxPoint.X + minPoint.X) / 2, (maxPoint.Y + minPoint.Y) / 2, (maxPoint.Z + minPoint.Z) / 2)
 
-line = Line.CreateUnbound(GetCentroid(element), XYZ.BasisZ)
-angle = UnitUtils.ConvertToInternalUnits(30, UnitTypeId.Degrees) #type: ignore
 
-with Transaction(doc) as tx:
-    tx.Start("Rotate Element")
+class ElementTransformUtilsRotateScript:
+    @staticmethod
+    def Run(doc):
+        instanceId = FilteredElementCollector(doc).OfClass(FamilyInstance).FirstElementId()
+        if instanceId is None or instanceId == ElementId.InvalidElementId:
+            print("No family instance found in the document.")
+            return
 
-    ElementTransformUtils.RotateElement(doc, instanceId, line, angle)
+        element = doc.GetElement(instanceId)
+        line = Line.CreateUnbound(GetCentroid(element), XYZ.BasisZ)
+        angle = UnitUtils.ConvertToInternalUnits(30, UnitTypeId.Degrees)  #type:ignore
 
-    tx.Commit()
+        t = Transaction(doc, "Rotate Element")
+        t.Start()
+        try:
+            ElementTransformUtils.RotateElement(doc, instanceId, line, angle)
+            t.Commit()
+        except:
+            t.RollBack()
+            raise
 
-OUT = "Element Rotated"
+        print(f"Element {instanceId} rotated 30 degrees.")
 
-#endregion
+
+ElementTransformUtilsRotateScript.Run(doc)

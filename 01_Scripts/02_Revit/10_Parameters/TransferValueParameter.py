@@ -1,80 +1,59 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
 import clr
 
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+doc = __revit__.ActiveUIDocument.Document  #type:ignore
 
-from System.Collections.Generic import List
+PARAM_ORIGIN = "Mark"
+PARAM_RESULT = "Comments"
+IS_TYPE = False
 
-#Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
 
-from System.Windows.Forms import*
-from System.Drawing import*
+def transfer_value(doc, name_origin, name_result, category, is_type):
+    cat_filter = ElementCategoryFilter(category.Id)
+    collector = (FilteredElementCollector(doc).WherePasses(cat_filter)
+                 .WhereElementIsElementType() if is_type
+                 else FilteredElementCollector(doc).WherePasses(cat_filter)
+                 .WhereElementIsNotElementType())
+    count = 0
+    for elem in collector.ToElements():
+        src = elem.LookupParameter(name_origin)
+        dst = elem.LookupParameter(name_result)
+        if src is None or dst is None or dst.IsReadOnly:
+            continue
+        if src.StorageType != dst.StorageType:
+            continue
+        if src.StorageType == StorageType.String and src.HasValue and src.AsString():
+            dst.Set(src.AsString())
+            count += 1
+        elif src.StorageType == StorageType.Integer and src.HasValue:
+            dst.Set(src.AsInteger())
+            count += 1
+        elif src.StorageType == StorageType.Double and src.HasValue:
+            dst.SetValueString(src.AsValueString())
+            count += 1
+    return count
 
-uidoc = __revit__.ActiveUIDocument #type:ignore
-doc = uidoc.Document
 
-# endregion
+class TransferValueParameterScript:
+    @staticmethod
+    def Run(doc, param_origin, param_result, is_type):
+        model_cats = [c for c in doc.Settings.Categories
+                      if c.CategoryType == CategoryType.Model]
 
-#region Transfer Parameter Value to other parameter Definition
+        t = Transaction(doc, "PyNET - Transfer Parameter Values")
+        t.Start()
+        try:
+            total = 0
+            for cat in model_cats:
+                total += transfer_value(doc, param_origin, param_result, cat, is_type)
+            t.Commit()
+        except:
+            t.RollBack()
+            raise
 
-# Definition Set parameter Value depending the Storage Type
-def SetParameterValue(nameOrigin, nameResult, collector):
-	count = 0
-	if collector.Count > 0:
-		for element in collector:
-			parameterOrigin = element.LookupParameter(nameOrigin)
-			parameterResult = element.LookupParameter(nameResult)
-			if parameterOrigin != None and parameterResult != None and parameterOrigin.StorageType == StorageType.String and parameterResult.StorageType == StorageType.String:
-				if parameterOrigin.HasValue != False and parameterOrigin.AsString() != "":
-					parameterResult.Set(parameterOrigin.AsString())
-					count += 1
-			elif parameterOrigin != None and parameterResult != None and parameterOrigin.StorageType == StorageType.Integer and parameterResult.StorageType == StorageType.Integer:
-				if parameterOrigin.HasValue != False:
-					parameterResult.Set(parameterOrigin.AsInteger())
-					count += 1
-			elif parameterOrigin != None and parameterResult != None and parameterOrigin.StorageType == StorageType.Double and parameterResult.StorageType == StorageType.Double:
-				if parameterOrigin.HasValue != False:
-					parameterResult.SetValueString(parameterOrigin.AsValueString())
-					count += 1
-	return count
+        print(f"Transferred '{param_origin}' → '{param_result}' for {total} elements.")
 
-# Collect Elements by Category and Set the Parameter
-def TransferValueParameter(nameOrigin, nameResult, category, typeOrInstance):
-	categoryFilter = ElementCategoryFilter(category.Id)
-	if typeOrInstance == True:
-		collector = FilteredElementCollector(doc).WherePasses(categoryFilter).WhereElementIsElementType().ToElements()
-		count = SetParameterValue(nameOrigin, nameResult, collector)
-		return count 
-	if typeOrInstance == False:
-		collector = FilteredElementCollector(doc).WherePasses(categoryFilter).WhereElementIsNotElementType().ToElements()
-		count = SetParameterValue(nameOrigin, nameResult, collector)
-		return count 
 
-# Get Revit categories and filter to Category Type equals to Model Type
-categories = doc.Settings.Categories
-modelCategories = [category for category in categories if category.CategoryType == CategoryType.Model]
-		
-# Set Parameter Transaction
-
-with Transaction(doc) as tx:
-	result = 0
-	for category in modelCategories:
-		count = TransferValueParameter(IN[0], IN[1], category, IN[2]) #type:ignore
-		result += count
-
-	tx.Commit()
-#Iterate Categories and Set Parameters Value
-
-OUT = "Process Finished, " + "Total Filled: " + str(result)
-
-#endregion
+TransferValueParameterScript.Run(doc, PARAM_ORIGIN, PARAM_RESULT, IS_TYPE)

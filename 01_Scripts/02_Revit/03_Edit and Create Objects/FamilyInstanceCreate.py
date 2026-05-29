@@ -1,73 +1,42 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
-import string
-import sys
-from tokenize import Ignore
 import clr
 
-clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
-
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
+from Autodesk.Revit.DB.Structure import StructuralType
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+doc = __revit__.ActiveUIDocument.Document  #type:ignore
 
-clr.AddReference('RevitNodes')
-import Revit
-clr.ImportExtensions(Revit.GeometryConversion)
-clr.ImportExtensions(Revit.Elements)
+FAMILY_NAME = "M_Desk"
+SYMBOL_NAME = "1525 x 762mm"
 
-clr.AddReference('RevitServices')
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
-from System.Collections.Generic import List
 
-doc = DocumentManager.Instance.CurrentDBDocument
-uiapp = DocumentManager.Instance.CurrentUIApplication
-app = uiapp.Application
-uidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument
+class FamilyInstanceCreateScript:
+    @staticmethod
+    def Run(doc):
+        familySymbols = FilteredElementCollector(doc).OfClass(FamilySymbol).ToElements()
+        familySymbol = None
+        for symbol in familySymbols:
+            if symbol.Family.Name == FAMILY_NAME and Element.Name.__get__(symbol) == SYMBOL_NAME:
+                familySymbol = symbol
+                break
 
-# Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
+        if familySymbol is None:
+            print(f"Family symbol '{FAMILY_NAME} - {SYMBOL_NAME}' not found.")
+            return None
 
-import System
-from System.Windows.Forms import*
-from System.Drawing import*
+        t = Transaction(doc, "Create Family Instance")
+        t.Start()
+        try:
+            if not familySymbol.IsActive:
+                familySymbol.Activate()
+            instance = doc.Create.NewFamilyInstance(XYZ.Zero, familySymbol, StructuralType.NonStructural)
+            t.Commit()
+        except:
+            t.RollBack()
+            raise
 
-# Analyze the Coincidence of the Unit Names
-from difflib import SequenceMatcher
+        print(f"Created family instance '{FAMILY_NAME}' id={instance.Id} at origin.")
+        return instance
 
-#endregion
 
-#region Create Family Instances
-
-familyName = "M_Desk"
-symbolName = "1525 x 762mm"
-
-# Get a Family symbol
-familySymbols = FilteredElementCollector(doc).OfClass(FamilySymbol).ToElements()
-familySymbol = None
-
-for symbol in familySymbols:
-    if symbol.Family.Name == familyName and Element.Name.__get__(symbol) == symbolName:
-        familySymbol = symbol
-
-with Transaction(doc) as tx:
-    tx.Start("Create Family Instance")
-
-    if familySymbol.IsActive == False:
-        familySymbol.Activate()
-    instance = doc.Create.NewFamilyInstance(XYZ.Zero, familySymbol, Structure.StructuralType.NonStructural) #type: ignore
-
-    tx.Commit()
-
-OUT = instance
-
-#endregion
+FamilyInstanceCreateScript.Run(doc)

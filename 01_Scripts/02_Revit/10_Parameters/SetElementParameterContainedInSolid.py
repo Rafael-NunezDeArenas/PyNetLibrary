@@ -1,82 +1,72 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
 import clr
 
-clr.AddReference('RevitAPI')
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+doc = __revit__.ActiveUIDocument.Document  #type:ignore
 
-from System.Collections.Generic import List
-
-#Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
-
-from System.Windows.Forms import*
-from System.Drawing import*
-
-uidoc = __revit__.ActiveUIDocument #type:ignore
-doc = uidoc.Document
-
-# endregion
+LINK_NAME = ""       # name of the linked document (leave empty to use first found)
+PARAM_NAME = ""      # parameter to set on intersecting elements
+SPECIAL_VALUE = ""   # value to use when element intersects multiple solids
 
 
-# region Set parameters with Element Solid Intersect
-def SetElementParametersWithSolidIntersect(iteration, parameter, specialValue, options):
-    result = []
-    for instance in iteration:
-        count = 0
-        parameterInstance = m.LookupParameter(parameter) #type: ignore
-    # Get Solid of Mass
-        geoElem = instance.get_Geometry(options)
-        for geoObject in geoElem:
-            if geoObject.__class__ == Solid and geoObject.Volume > 0:
-                solid = geoObject
-                filter = ElementIntersectsSolidFilter(solid)
-                elements = FilteredElementCollector(doc).WherePasses(filter).ToElements()
-                result.append(elements)
-                for element in elements:
-                    parameter = element.LookupParameter(parameter) #type: ignore
-                    if parameter != None: 
-                        parameter.Set(parameterInstance.AsString())
-                    if count - 1 >= 0 and element in result[count - 1]:
-                        parameter.Set(specialValue) #type: ignore
-        count += 1
-    return None
+class SetParamContainedInSolidScript:
+    @staticmethod
+    def get_link_doc(doc, link_name):
+        for inst in FilteredElementCollector(doc).OfClass(RevitLinkInstance):
+            linked = inst.GetLinkDocument()
+            if linked is not None and (not link_name or linked.Title == link_name):
+                return linked
+        return None
 
-# Obtain Link Doc.
-links = FilteredElementCollector(doc).OfClass(RevitLinkInstance)
-Documents = [n.GetLinkDocument() for n in links]
-linkDoc = None
-linkName = IN[0] #type: ignore
+    @staticmethod
+    def set_params(doc, mass_elements, param_name, special_value, options):
+        updated = 0
+        previous_element_sets = []
+        for mass in mass_elements:
+            geo_elem = mass.get_Geometry(options)
+            for geo_obj in geo_elem:
+                if not isinstance(geo_obj, Solid) or geo_obj.Volume <= 0:
+                    continue
+                solid_filter = ElementIntersectsSolidFilter(geo_obj)
+                intersecting = list(FilteredElementCollector(doc)
+                                    .WherePasses(solid_filter).ToElements())
+                mass_param = mass.LookupParameter(param_name)
+                mass_value = mass_param.AsString() if mass_param else ""
+                for elem in intersecting:
+                    ep = elem.LookupParameter(param_name)
+                    if ep is None or ep.IsReadOnly:
+                        continue
+                    already_seen = any(elem.Id in prev for prev in previous_element_sets)
+                    ep.Set(special_value if already_seen else mass_value)
+                    updated += 1
+                previous_element_sets.append([e.Id for e in intersecting])
+        return updated
 
-for document in Documents:
-	if hasattr(document, "Title"):
-		linkName == document.Title
-		linkDoc = document
-		break
+    @staticmethod
+    def Run(doc, link_name, param_name, special_value):
+        link_doc = SetParamContainedInSolidScript.get_link_doc(doc, link_name)
+        if link_doc is None:
+            print("Linked document not found.")
+            return
 
-# Get LinkDoc Mass ot spaces or element to Intersect Solid
-mass = FilteredElementCollector(linkDoc).OfCategory(BuiltInCategory.OST_Mass).WhereElementIsNotElementType().ToElements()
+        mass = (FilteredElementCollector(link_doc)
+                .OfCategory(BuiltInCategory.OST_Mass)
+                .WhereElementIsNotElementType().ToElements())
+        opts = Options()
+        opts.DetailLevel = ViewDetailLevel.Fine
 
-# Create Geometry Options
-opts = Options()
-opts.DetailLevel = ViewDetailLevel.Fine
+        t = Transaction(doc, "PyNET - Set Parameter Contained in Solid")
+        t.Start()
+        try:
+            count = SetParamContainedInSolidScript.set_params(
+                doc, mass, param_name, special_value, opts)
+            t.Commit()
+        except:
+            t.RollBack()
+            raise
 
-# Set Parameter With Mass Value. Iterate Mass and get Parameter Value
-with Transaction(doc) as tx:
+        print(f"Updated {count} element parameters.")
 
-    tx.Start("Set Parameter Contained in Mass")
 
-    SetElementParametersWithSolidIntersect(mass, IN[1], IN[2], opts) # type: ignore
-    
-    tx.Commit()
-
-OUT = "Process Finished"
-
-#endregion
+SetParamContainedInSolidScript.Run(doc, LINK_NAME, PARAM_NAME, SPECIAL_VALUE)

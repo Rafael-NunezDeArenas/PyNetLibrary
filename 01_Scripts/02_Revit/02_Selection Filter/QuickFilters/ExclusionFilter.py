@@ -1,57 +1,23 @@
-#region References
-
-# Load the Python Standard and DesignScript Libraries
-import string
-import sys
 import clr
 
-clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
+clr.AddReference("RevitAPI")
+clr.AddReference("RevitAPIUI")
 
-clr.AddReference('RevitAPI')
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.DB.Structure import *
 
-clr.AddReference('RevitAPIUI')
-from Autodesk.Revit.UI import *
+uidoc = __revit__.ActiveUIDocument  #type:ignore
+doc = uidoc.Document
 
-clr.AddReference('RevitNodes')
-import Revit
-clr.ImportExtensions(Revit.GeometryConversion)
-clr.ImportExtensions(Revit.Elements)
 
-clr.AddReference('RevitServices')
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
-from System.Collections.Generic import List
+class ExclusionFilterScript:
+    @staticmethod
+    def Run(doc, uidoc):
+        activeView = uidoc.ActiveView
+        exclusionFilter = ExclusionFilter(activeView.Id)
+        collectorFilter = FilteredElementCollector(doc).OfClass(View).WherePasses(exclusionFilter).ToElements()
 
-doc = DocumentManager.Instance.CurrentDBDocument
-uiapp = DocumentManager.Instance.CurrentUIApplication
-app = uiapp.Application
-uidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument
+        print(f"Found {len(collectorFilter)} view(s) excluding the active view.")
+        return list(collectorFilter)
 
-# Import Windows form
-clr.AddReference("System.Windows.Forms")
-# Import System Drawing
-clr.AddReference("System.Drawing")
 
-import System
-from System.Windows.Forms import*
-from System.Drawing import*
-
-clr.AddReference('System')
-from System.Collections.Generic import List
-
-#endregion
-
-#region Exclusion Filter
-
-# Create Exclusion Filter
-activeView = uidoc.ActiveView
-exclusionFilter = ExclusionFilter(activeView.Id)
-collectorFilter = FilteredElementCollector(doc).OfClass(View).WherePasses(exclusionFilter).ToElements()
-
-OUT = collectorFilter
-
-#endregion
+ExclusionFilterScript.Run(doc, uidoc)
