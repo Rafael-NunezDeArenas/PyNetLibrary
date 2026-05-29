@@ -1,44 +1,43 @@
-# encoding: utf-8
-# module Autodesk.Navisworks.Api.Interop.Plugins calls itself Plugins
-# from Autodesk.Navisworks.Api, Version=19.0.1374.1, Culture=neutral, PublicKeyToken=d85e58fa5af9b484
-# by generator 1.145
-# no doc
-# no imports
+# Auto-generated — Navisworks 24 — Autodesk.Navisworks.Api.Interop.Plugins
 
-# no functions
-# classes
-
-class LegacyManager(object):
-    # no doc
+class LegacyManager:
+    """.NET: Autodesk.Navisworks.Api.Interop.Plugins.LegacyManager"""
+    def __init__(self, *args) -> None: ...
+    Plugins: Collection
     @staticmethod
-    def LoadPlugins(attribLoading):
-        """ LoadPlugins(attribLoading: Attribute) -> int """
-        pass
+    def LoadPlugins(attribLoading: Attribute) -> int: ...
 
-    Plugins = None
+class LegacyPlugin:
+    """.NET: Autodesk.Navisworks.Api.Interop.Plugins.LegacyPlugin"""
+    def __init__(self, *args) -> None: ...
+    PluginInterface: IPlugin
+    DataDir: str
+    AssemblyPrefix: str
 
+class ModelDataPlugin(Plugin):
+    """.NET: Autodesk.Navisworks.Api.Interop.Plugins.ModelDataPlugin"""
+    def __init__(self, *args) -> None: ...
+    PluginRecord: PluginRecord
+    DeveloperId: str
+    Name: str
+    Id: str
+    def ImportData(self, m: LcOpModel, filename: str) -> None: ...
 
-class LegacyPlugin(object):
-    """ LegacyPlugin(assembly: Assembly, iPlugin: IPlugin, DataDir: str) """
-    @staticmethod # known case of __new__
-    def __new__(self, assembly, iPlugin, DataDir):
-        """ __new__(cls: type, assembly: Assembly, iPlugin: IPlugin, DataDir: str) """
-        pass
-
-    AssemblyPrefix = property(lambda self: object(), lambda self, v: None, lambda self: None)  # default
-    """Get: AssemblyPrefix(self: LegacyPlugin) -> str
-
-"""
-
-    DataDir = property(lambda self: object(), lambda self, v: None, lambda self: None)  # default
-    """Get: DataDir(self: LegacyPlugin) -> str
-
-"""
-
-    PluginInterface = property(lambda self: object(), lambda self, v: None, lambda self: None)  # default
-    """Get: PluginInterface(self: LegacyPlugin) -> IPlugin
-
-"""
-
-
-
+class ModelDataPluginRecord(PluginRecord):
+    """.NET: Autodesk.Navisworks.Api.Interop.Plugins.ModelDataPluginRecord"""
+    def __init__(self, *args) -> None: ...
+    InterfaceRecords: ReadOnlyCollection
+    SupportsIsSelfEnabled: bool
+    HasFailedIsSelfEnabled: bool
+    HasFailedCreate: bool
+    HasAttemptedCreate: bool
+    LoadedPlugin: Plugin
+    IsLoaded: bool
+    IsEnabled: bool
+    ExtendedToolTip: str
+    ToolTip: str
+    DisplayName: str
+    PluginOptions: PluginOptions
+    DeveloperId: str
+    Name: str
+    Id: str

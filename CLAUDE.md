@@ -507,3 +507,76 @@ If a library is missing from the whitelist and needed regularly, flag it so it c
 Use **Developer Mode** only when explicitly activated with `/DevMode developer`. In that mode, show full script content, JSON responses, technical details, and stack traces.
 
 See `/DevMode` skill for full behavioral spec.
+
+---
+
+## 11. API Stubs
+
+Stubs live in **`02_PyNet Stubs/`** and are committed to the repo. Pylance picks them up via `python.analysis.extraPaths` configured in VS Code user settings pointing to that folder.
+
+### Structure
+
+```
+02_PyNet Stubs/
+  Autodesk/
+    Navisworks/   ← generated from Navisworks 2024
+    Revit/        ← generated from Revit 2027
+  System/         ← legacy .NET stubs (kept, useful for intellisense)
+```
+
+### IntelliSense setup (VS Code)
+
+For Pylance to resolve API classes like `Wall`, `FilteredElementCollector`, `Search`, etc., the stubs path must be registered in VS Code.
+
+**Check on session start:** verify whether `python.analysis.extraPaths` in the user's VS Code settings includes the stubs folder:
+
+```
+%APPDATA%\Pynet\Library\02_PyNet Stubs
+```
+
+The user settings file is at:
+```
+C:\Users\<user>\AppData\Roaming\Code\User\settings.json
+```
+
+If it is missing, **ask the user** whether they write scripts and would like IntelliSense autocomplete. If yes, explain:
+
+> "I can configure VS Code so that when you write scripts, it automatically suggests Revit and Navisworks API classes and methods as you type — like autocomplete for the API. It's a one-time setup. Want me to set it up?"
+
+Then add the path to their `settings.json`. If the file doesn't exist, create it. Never modify other settings already present.
+
+---
+
+### Generating stubs
+
+Run `01_Scripts/00_utils/GenerateStubs.py` from the active host via `send_command`. The script:
+
+1. **Auto-detects the host** — Revit (`__revit__` global present) or Navisworks
+2. **Loads all relevant assemblies** for that host
+3. **Deletes only `Autodesk/<Host>/`** — Navisworks and Revit stubs coexist
+4. **Regenerates** with correct Python syntax (keywords escaped, arrays/pointers/by-ref mapped)
+5. Writes directly to `02_PyNet Stubs/` in the repo
+
+**One set of stubs per host, always the version currently open.** Do not maintain stubs for multiple versions of the same host — Pylance would see conflicting class definitions.
+
+### Assembly sets
+
+| Host | Assemblies |
+|------|-----------|
+| Navisworks | `Autodesk.Navisworks.Api`, `.ComApi`, `.Interop.ComApi`, `.Clash` |
+| Revit | `RevitAPI`, `RevitAPIUI` |
+| Civil 3D | `RevitAPI`, `RevitAPIUI`, `AeccXUiLand`, `AeccXDbLand` |
+
+### Known type mappings
+
+| .NET | Python stub |
+|------|-------------|
+| `String` | `str` |
+| `Boolean` | `bool` |
+| `Int32` / `Int64` | `int` |
+| `Double` / `Single` | `float` |
+| `Void` | `None` |
+| `T[]` (array) | `list` |
+| `T&` (by-ref / out) | same as `T` |
+| `T*` (pointer) | same as `T` |
+| Python keywords as param names | appended `_` (e.g. `type_`, `from_`, `in_`) |

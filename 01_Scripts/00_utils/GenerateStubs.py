@@ -1,174 +1,230 @@
 import clr
-import os
-import System
+from pathlib import Path
 from collections import defaultdict
-from System.Reflection import BindingFlags #type:ignore
+from System import AppDomain
+from System.Reflection import BindingFlags  # type:ignore
 
-
-ASSEMBLY_NAME = "Autodesk.Navisworks.Clash"
-
-desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
-os.makedirs(desktop_path, exist_ok=True)
-
-OUTPUT_FILE = os.path.join(desktop_path, "navisworks_api_stubs.py")
-
-clr.AddReference(ASSEMBLY_NAME)
-
-assemblies = System.AppDomain.CurrentDomain.GetAssemblies()
-
-target_assembly = None
-for asm in assemblies:
-    if asm.GetName().Name == ASSEMBLY_NAME:
-        target_assembly = asm
-        break
-
-if not target_assembly:
-    raise Exception(f"Assembly {ASSEMBLY_NAME} not found")
-
-
-
-TYPE_MAP = {
-    "String": "str",
-    "Boolean": "bool",
-    "Int32": "int",
-    "Int64": "int",
-    "Double": "float",
-    "Single": "float",
-    "Void": "None",
-    "Object": "object",
+PYTHON_KEYWORDS = {
+    'False', 'None', 'True', 'and', 'as', 'assert', 'async', 'await',
+    'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 'except',
+    'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is',
+    'lambda', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try',
+    'while', 'with', 'yield',
 }
 
+def safe_name(name):
+    if not name:
+        return "value_"
+    return name + "_" if name in PYTHON_KEYWORDS else name
+
+# ── Host detection ─────────────────────────────────────────────────────────────
+try:
+    _revit = __revit__  # type:ignore
+    HOST = "Revit"
+    VERSION = _revit.Application.VersionNumber
+except NameError:
+    HOST = "Navisworks"
+    try:
+        clr.AddReference("Autodesk.Navisworks.Api")
+        from Autodesk.Navisworks.Api import Application as _NavApp
+        VERSION = str(_NavApp.Version.RuntimeMajor)
+    except Exception:
+        VERSION = "unknown"
+
+print(f"Host: {HOST} {VERSION}")
+
+# ── Assembly lists per host ────────────────────────────────────────────────────
+ASSEMBLY_SETS = {
+    "Navisworks": [
+        "Autodesk.Navisworks.Api",
+        "Autodesk.Navisworks.ComApi",
+        "Autodesk.Navisworks.Interop.ComApi",
+        "Autodesk.Navisworks.Clash",
+    ],
+    "Revit": [
+        "RevitAPI",
+        "RevitAPIUI",
+    ],
+    "Civil": [
+        "RevitAPI",
+        "RevitAPIUI",
+        "AeccXUiLand",
+        "AeccXDbLand",
+    ],
+}
+
+ASSEMBLIES = ASSEMBLY_SETS.get(HOST, ASSEMBLY_SETS["Navisworks"])
+
+# ── Output: repo stubs folder (committed to GitHub) ───────────────────────────
+# Cleans only the Autodesk\<Host> subtree so Navisworks and Revit stubs coexist.
+STUBS_ROOT = Path.home() / "source" / "repos" / "GithubRNM" / "PyNetLibrary" / "02_PyNet Stubs"
+STUBS_ROOT.mkdir(parents=True, exist_ok=True)
+
+# Host root inside Autodesk\ (e.g. Autodesk\Revit or Autodesk\Navisworks)
+HOST_NS_ROOT = {
+    "Revit":     "Revit",
+    "Navisworks": "Navisworks",
+    "Civil":     "Civil3D",
+}
+HOST_AUTODESK_DIR = STUBS_ROOT / "Autodesk" / HOST_NS_ROOT.get(HOST, HOST)
+
+print(f"Stubs root:  {STUBS_ROOT}")
+print(f"Cleaning:    {HOST_AUTODESK_DIR}\n")
+
+# ── Clean only the host subtree ────────────────────────────────────────────────
+def remove_tree(p: Path):
+    if p.is_dir():
+        for child in p.iterdir():
+            remove_tree(child)
+        p.rmdir()
+    elif p.exists():
+        p.unlink()
+
+if HOST_AUTODESK_DIR.exists():
+    remove_tree(HOST_AUTODESK_DIR)
+
+# ── Type map ───────────────────────────────────────────────────────────────────
+TYPE_MAP = {
+    "String": "str",   "Boolean": "bool",
+    "Int32": "int",    "Int64": "int",   "UInt32": "int",  "UInt64": "int",
+    "Int16": "int",    "UInt16": "int",  "Byte": "int",    "SByte": "int",
+    "Double": "float", "Single": "float",
+    "Char": "str",     "Void": "None",   "Object": "object",
+}
 
 def map_type(t):
     try:
-        name = t.Name
+        if t.IsArray:
+            return "list"
+        if t.IsByRef or t.IsPointer:
+            return map_type(t.GetElementType())
+        name = t.Name.split("`")[0]
         return TYPE_MAP.get(name, name)
-    except:
+    except Exception:
         return "object"
 
-
-def generate_methods(methods, current_type):
+# ── Code generators ────────────────────────────────────────────────────────────
+def gen_methods(methods, declaring_type):
     grouped = defaultdict(list)
-
     for m in methods:
-        if m.IsSpecialName:
+        if m.IsSpecialName or m.DeclaringType != declaring_type:
             continue
-        if m.DeclaringType != current_type:
-            continue
-
         grouped[m.Name].append(m)
 
     lines = []
-
-    for name, overloads in grouped.items():
+    for name, overloads in sorted(grouped.items()):
         try:
-            overloads = sorted(
-                overloads,
-                key=lambda m: len(m.GetParameters()),
-                reverse=True
-            )
-
-            best = overloads[0]
-
-            is_static = best.IsStatic
-            decorator = "@staticmethod\n    " if is_static else ""
-
-            signature = "self, *args" if not is_static else "*args"
-
-            params_doc = []
-            for p in best.GetParameters():
-                p_name = p.Name
-                p_type = map_type(p.ParameterType)
-                params_doc.append(f"{p_name}: {p_type}")
-
+            safe_method = safe_name(name)
+            best = max(overloads, key=lambda m: len(m.GetParameters()))
+            params = [f"{safe_name(p.Name)}: {map_type(p.ParameterType)}" for p in best.GetParameters()]
             ret = map_type(best.ReturnType)
-
-            doc = "Signature:\n        "
-            doc += f"{name}({', '.join(params_doc)}) -> {ret}"
-
-            lines.append(f"""
-    {decorator}def {name}({signature}):
-        \"\"\"
-        {doc}
-        \"\"\"
-        pass
-            """)
-        except:
+            if best.IsStatic:
+                lines.append(f"    @staticmethod")
+                lines.append(f"    def {safe_method}({', '.join(params)}) -> {ret}: ...")
+            else:
+                lines.append(f"    def {safe_method}(self, {', '.join(params)}) -> {ret}: ...")
+        except Exception:
             continue
+    return lines
 
-    return "\n".join(lines)
-
-
-def generate_property(p):
-    try:
-        name = p.Name
-        typ = map_type(p.PropertyType)
-
-        return f"""
-    {name}: {typ} = property(lambda self: None, lambda self, v: None)
-    """
-    except:
-        return ""
-
-
-def generate_class(t):
+def gen_class(t):
     try:
         if not t.IsPublic:
-            return ""
-
-        name = t.Name
-
+            return None
+        name = t.Name.split("`")[0]
         bases = []
-        if t.BaseType:
+        if t.BaseType and t.BaseType.FullName not in (
+                "System.Object", "System.ValueType",
+                "System.Enum", "System.MulticastDelegate"):
             bases.append(map_type(t.BaseType))
+        base_str = f"({', '.join(bases)})" if bases else ""
 
-        bases_str = ", ".join(bases) if bases else "object"
+        flags = (BindingFlags.Public | BindingFlags.Instance |
+                 BindingFlags.Static | BindingFlags.DeclaredOnly)
 
-        lines = []
-        lines.append(f"class {name}({bases_str}):")
-        lines.append(f'    """ .NET type: {t.FullName} """')
-
-        lines.append("""
-    def __init__(self, *args) -> None:
-        pass
-        """)
-
-        methods = t.GetMethods(
-            BindingFlags.Public |
-            BindingFlags.Instance |
-            BindingFlags.Static |
-            BindingFlags.DeclaredOnly
-        )
-
-        lines.append(generate_methods(methods, t))
-
-        # Properties
+        body = [
+            f'class {name}{base_str}:',
+            f'    """.NET: {t.FullName}"""',
+            f'    def __init__(self, *args) -> None: ...',
+        ]
         for p in t.GetProperties():
             try:
-                prop_code = generate_property(p)
-                if prop_code:
-                    lines.append(prop_code)
-            except:
+                body.append(f"    {p.Name}: {map_type(p.PropertyType)}")
+            except Exception:
                 continue
+        body.extend(gen_methods(t.GetMethods(flags), t))
+        if len(body) == 3:
+            body.append("    ...")
+        return "\n".join(body)
+    except Exception:
+        return None
 
-        return "\n".join(lines)
+# ── Namespace → relative file path ────────────────────────────────────────────
+def ns_to_relpath(ns: str, all_ns: set) -> Path:
+    parts = ns.split(".")
+    has_children = any(n.startswith(ns + ".") for n in all_ns if n != ns)
+    if has_children:
+        return Path(*parts) / "__init__.py"
+    return Path(*parts[:-1]) / f"{parts[-1]}.py"
 
-    except:
-        return ""
+def ensure_inits(file_path: Path, root: Path):
+    current = file_path.parent
+    while current != root and current != current.parent:
+        init = current / "__init__.py"
+        if not init.exists():
+            init.write_text("# auto-generated\n", encoding="utf-8")
+        current = current.parent
 
+# ── Load assemblies ────────────────────────────────────────────────────────────
+for asm_name in ASSEMBLIES:
+    try:
+        clr.AddReference(asm_name)
+        print(f"  Loaded: {asm_name}")
+    except Exception as e:
+        print(f"  SKIP:   {asm_name} — {e}")
 
-types = target_assembly.GetTypes()
+loaded = {a.GetName().Name: a for a in AppDomain.CurrentDomain.GetAssemblies()}
 
-with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-    f.write("# Auto-generated Navisworks API stubs (clean reflection)\n\n")
+# ── Collect types by namespace ─────────────────────────────────────────────────
+ns_types: dict = defaultdict(list)
+for asm_name in ASSEMBLIES:
+    asm = loaded.get(asm_name)
+    if asm is None:
+        continue
+    try:
+        for t in asm.GetTypes():
+            try:
+                if t.IsPublic and t.Namespace:
+                    ns_types[t.Namespace].append(t)
+            except Exception:
+                continue
+    except Exception as e:
+        print(f"  ERROR reading {asm_name}: {e}")
 
-    for t in types:
-        try:
-            class_code = generate_class(t)
-            if class_code:
-                f.write(class_code)
-                f.write("\n\n")
-        except:
-            continue
+all_ns = set(ns_types.keys())
+print(f"\nNamespaces: {len(all_ns)}")
 
-print(f"Stub created: {OUTPUT_FILE}")
+# ── Write stub files ───────────────────────────────────────────────────────────
+written = errors = 0
+for ns, types in sorted(ns_types.items()):
+    try:
+        rel = ns_to_relpath(ns, all_ns)
+        out = STUBS_ROOT / rel
+        out.parent.mkdir(parents=True, exist_ok=True)
+        ensure_inits(out, STUBS_ROOT)
+
+        lines = [f"# Auto-generated — {HOST} {VERSION} — {ns}", ""]
+        for t in sorted(types, key=lambda x: x.Name):
+            code = gen_class(t)
+            if code:
+                lines.append(code)
+                lines.append("")
+
+        out.write_text("\n".join(lines), encoding="utf-8")
+        written += 1
+    except Exception as e:
+        print(f"  ERROR {ns}: {e}")
+        errors += 1
+
+print(f"\nDone: {written} files written, {errors} errors.")
+print(f"Location: {STUBS_ROOT}")
