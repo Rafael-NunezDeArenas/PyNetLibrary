@@ -2,7 +2,7 @@
   <img src="https://github.com/rafa2403nunez-droid/PyNetLibrary/blob/main/Assets/PyNetLibrary.png" width="300"/>
 </p>
 
-# 📚 PyNet Library — Autodesk Apps API Context
+# PyNet Library
 
 **API context and reference scripts for Autodesk applications (Navisworks, Revit, Civil 3D)**, designed for the **[PyNet Platform](https://github.com/rafa2403nunez-droid/PyNet)**. This repo provides Python-style **stubs** of the Autodesk .NET APIs and example scripts, so that AI models (and developers) have the context they need to generate and understand automation code that runs through PyNet's embedded **Python.NET** engine.
 
@@ -12,8 +12,9 @@
 
 ## ⚡ Quick Start
 
-If you are an AI model or developer, you can quickly verify the environment with a minimal script (Navisworks example):
+If you are an AI model or developer, you can quickly verify the environment with a minimal script:
 
+**Navisworks:**
 ```python
 import clr
 from Autodesk.Navisworks.Api import Application
@@ -22,12 +23,17 @@ doc = Application.ActiveDocument
 print(doc.Title)
 ```
 
-If this executes successfully inside PyNet, the environment is correctly configured.
+**Revit:**
+```python
+import clr
+clr.AddReference("RevitAPI")
+from Autodesk.Revit.DB import *
 
-This confirms:
-- Python.NET is working
-- The Autodesk API is accessible
-- Active document context is available
+doc = __revit__.ActiveUIDocument.Document
+print(doc.Title)
+```
+
+If either executes successfully inside PyNet, the environment is correctly configured.
 
 ---
 
@@ -44,8 +50,10 @@ Scripts run via **Python.NET** (CPython 3.10+ + `pythonnet` — not IronPython).
 **Key rules:**
 - Always call `clr.AddReference(...)` before importing any Autodesk or System namespace.
 - Use `List[T]` from `System.Collections.Generic` when passing collections to .NET methods.
-- All UI dialogs use `System.Windows.Forms.MessageBox`.  
+- Navisworks UI dialogs use `System.Windows.Forms.MessageBox`. Revit scripts can use both WinForms and `Autodesk.Revit.UI.TaskDialog`.
+- Revit write operations must be wrapped in a `Transaction`.
 
+---
 
 ## 🧠 AI Usage Guidelines
 
@@ -61,11 +69,14 @@ When generating scripts for PyNet (Navisworks, Revit, Civil 3D), follow these ru
 - Only include imports that are required for the script to function
 
 ### API Usage
-- Use Application.ActiveDocument as the entry point to the model
-- Prefer strongly typed Navisworks API classes over dynamic access
+- **Navisworks:** use `Application.ActiveDocument` as the entry point to the model; prefer strongly typed API classes over dynamic access
+- **Revit:** use `__revit__.ActiveUIDocument.Document`; wrap all write operations in a `Transaction`; use `FilteredElementCollector` for element queries
+- When working with Clash or interface-heavy APIs in Navisworks, use `CastUtils.CastTo[T]` to avoid proxy objects
 
 ### UI interaction
-- Use System.Windows.Forms for dialogs
+- Use `System.Windows.Forms` for dialogs in both hosts
+- In Revit, always import WinForms before `Autodesk.Revit.UI` to avoid `TaskDialog` name collision
+- Never make Revit API calls inside WinForms event handlers — do all API work after `ShowDialog()` returns
 - Avoid blocking UI threads unnecessarily
 
 ### Output
@@ -89,6 +100,8 @@ When generating scripts for PyNet (Navisworks, Revit, Civil 3D), follow these ru
 
 ## 📋 Standard Boilerplate
 
+### Navisworks
+
 ```python
 import clr
 import sys
@@ -108,7 +121,6 @@ clr.AddReference("System.Drawing")
 
 from System.Windows.Forms import *
 from System.Drawing import *
-
 from System.Collections.Generic import List
 
 from Autodesk.Navisworks.Api import Application
@@ -119,6 +131,41 @@ For clash detection, add:
 ```python
 clr.AddReference("Autodesk.Navisworks.Clash")
 from Autodesk.Navisworks.Api.Clash import *
+```
+
+### Revit
+
+```python
+import clr
+import System
+from System import Enum, Environment
+from pathlib import Path
+
+clr.AddReference("RevitAPI")
+from Autodesk.Revit.DB import *
+
+# __revit__ is injected by the PyNET plugin
+doc = __revit__.ActiveUIDocument.Document
+```
+
+Any write operation requires a transaction:
+```python
+t = Transaction(doc, "Transaction name")
+t.Start()
+try:
+    # write operations
+    t.Commit()
+except:
+    t.RollBack()
+    raise
+```
+
+For WinForms dialogs (import order is critical — WinForms before Revit UI):
+```python
+from Autodesk.Revit.DB import *
+from System.Windows.Forms import *      # WinForms first
+from System.Drawing import *
+from Autodesk.Revit.UI import TaskDialog, TaskDialogCommonButtons, TaskDialogIcon
 ```
 
 ## 🧪 Minimal Working Example
@@ -222,12 +269,32 @@ Working scripts organized by use case:
 
 - **Model Management** (`01_ModelManagement/`) — open, append, list and publish NWD files using the core Document API.
 - **Search Sets** (`02_SearchSets/`) — create Search Sets from property conditions (`SearchCondition`, `VariantData`, `SearchLocations`).
-- **Clash Detection** (`03_ClashDetection/`) — export, import, rename and run clash tests, working with `doc.Clash.TestsData.Tests`.
-- **Data Analysis** (`04_DataAnalysis/`) — chart generation from clash data (bar charts, pie charts, stacked bars).
-- **Query Elements** (`05_QueryElements/`) — search and isolate model elements by property filters.
-- **Workflows** (`06_Workflows/`) — end-to-end automation: model federation updates, coordination workflows with backup, clash execution, and NWD publishing.
+- **Clash Detection** (`03_ClashDetection/`) — export, import, rename, run and auto-review clash tests; add comments; extract element info; generate clash images. Works with `doc.Clash.TestsData.Tests` via `CastUtils`.
+- **Data Analysis** (`04_DataAnalysis/`) — chart generation from clash data (bar charts, pie charts, stacked bars); interactive clash dashboard with IFC viewer integration.
+- **Query Elements** (`05_QueryElements/`) — isolate and measure elements by property filters (foundations, panels, wall linear meters, unique parameter values).
+- **IFC Export** (`07_IFCExport/`) — geometry extraction and export to IFC/PNT format; includes a fast instanced-node exporter (`NavisworksPNT_IFC_Fast`) with per-category routing (FAST/INSTNODE/DIRECT).
 
-### Revit — 01_Scripts/02_Revit/ *(coming soon)*
+### Revit — 01_Scripts/02_Revit/
+
+Working scripts organized by use case:
+
+- **Selection — User Input** (`01_Selection User/`) — interactive element picking via `PickObject`, `PickObjects`, rectangle selection, and extending existing selections.
+- **Selection — Filters** (`02_Selection Filter/`) — `FilteredElementCollector` patterns grouped by filter type:
+  - *Quick filters* — `ElementCategoryFilter`, `ElementClassFilter`, `BoundingBoxIntersectsFilter`, `BoundingBoxInsideFilter`, `BoundingBoxContainsPointFilter`, `FamilySymbolFilter`, `ElementStructuralTypeFilter`, `IsCurveDrivenElementFilter`, `IsElementTypeFilter`, `ElementIdSetFilter`, `ElementDesignOptionFilter`, `ElementOwnerViewFilter`, `MultiCategoryFilter`, `MultiClassFilter`, `ExclusionFilter`
+  - *Slow filters* — `ElementParameterFilter` (value-based filtering), `ElementIntersectsSolidFilter`
+  - *Logical filters* — `LogicalAndFilter`, `LogicalOrFilter` (composing multiple filters)
+  - *Special selections* — get element by Id, get doors/windows of a room, get panels of a room
+- **Edit and Create Objects** (`03_Edit and Create Objects/`) — create walls, floors, holes, family instances, and transforms; move and rotate elements with `ElementTransformUtils`; edit wall profiles; undo rotations.
+- **Units** (`04_Units/`) — convert between internal Revit units and display units using `UnitUtils`; comparison and conversion helpers.
+- **Grids, Levels, Design Options, Phases** (`05_Grids Levels Design Options and Phases/`) — create grids and levels programmatically.
+- **Task Dialogs** (`07_TaskDialog/`) — chained `TaskDialog` sequences with conditional branching.
+- **Parameters** (`10_Parameters/`) — create shared parameters, project parameters, and PyNET-specific parameters; get categories bound to a parameter; transfer values between parameters; tag elements contained in a solid.
+- **Families** (`13_Families/`) — inspect family parameters and their types at runtime.
+- **Windows Forms** (`16_WindowsForms/`) — WinForms inside Revit: view filter forms, multi-model open/create/save workflow with full `Transaction` handling and `TaskDialog` confirmation.
+- **Location and Coordinates** (`18_Location and Coordinates/`) — read and write `ProjectPosition` (origin, angle to true north).
+- **Worksharing** (`20_Worksharing/`) — read Autodesk user login info from a workshared model.
+- **Structure** (`23_Structure/`) — create structural beams, columns, wall foundations, and trusses using `NewFamilyInstance` and `NewBeam`.
+- **MEP** (`24_MEP/`) — create ducts (`Duct.Create`) and electrical wires (`Wire.Create`) with connectors and curve endpoints.
 
 ### Civil 3D — 01_Scripts/03_Civil3D/ *(coming soon)*
 
