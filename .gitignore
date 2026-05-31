@@ -3,3 +3,5 @@ __pycache__/
 .claude/
 *.zip
 *.pdf
+01_Scripts/01_Navisworks/00_Workflows/
+01_Scripts/02_Revit/00_Workflow/
