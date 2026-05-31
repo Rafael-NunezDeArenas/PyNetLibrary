@@ -337,8 +337,8 @@ Natural Language → AI → Python Script → PyNet → Navisworks / Revit / Civ
 
 | Component | Repository | Purpose |
 | :--- | :--- | :--- |
-| **PyNet Platform** | [rafa2403nunez-droid/PyNet](https://github.com/rafa2403nunez-droid/PyNet) | Navisworks/Revit plugin — hosts the Python.NET engine |
-| **PyNet Bridge (MCP)** | [rafa2403nunez-droid/PyNetBridge](https://github.com/rafa2403nunez-droid/PyNetBridge) | MCP server - connects AI models to PyNET with including secure scripts validation|
+| **PyNet Platform** | [PyNet](https://github.com/rafa2403nunez-droid/PyNet) | Navisworks/Revit plugin — hosts the Python.NET engine |
+| **PyNet Bridge (MCP)** | [PyNetBridge](https://github.com/rafa2403nunez-droid/PyNetBridge) | MCP server - connects AI models to PyNET with including secure scripts validation|
 | **PyNet Library** | This repo | Script reference library and AI context |
 
 To have AI generate and execute scripts live against Navisworks or Revit, install the MCP server:
