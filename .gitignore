@@ -7,3 +7,4 @@ __pycache__/
 01_Scripts/02_Revit/00_Workflow/
 03_Viewer/server/dist/
 03_Viewer/server/build/
+*.exe
