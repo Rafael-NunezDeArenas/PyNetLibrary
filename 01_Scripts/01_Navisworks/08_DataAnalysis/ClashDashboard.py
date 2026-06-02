@@ -16,7 +16,7 @@ bundlePath = (Path.home() / "AppData" / "Roaming" / "Autodesk" / "ApplicationPlu
               / "RAEN.Navisworks.PyNET.bundle" / "Contents" / "2024")
 sys.path.append(str(bundlePath))
 clr.AddReference("Raen.Core.Pynet.Resources")
-from Raen.Core.Pynet.Resources import CastUtils
+from Raen.Core.Pynet.Resources import CastUtils #type:ignore
 
 from Autodesk.Navisworks.Api import Application
 doc = Application.ActiveDocument

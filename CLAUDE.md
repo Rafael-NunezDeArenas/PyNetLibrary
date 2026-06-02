@@ -140,6 +140,32 @@ Any other assembly will be rejected.
 
 ---
 
+## 4.1 Python.NET Runtime Contamination (Revit)
+
+The Python runtime inside Revit is **persistent and shared** across all script executions (both `send_command` and button). A failed import can leave a module in a broken state in `sys.modules` that affects all subsequent scripts in the same session.
+
+### Critical rule: never modify imports to diagnose an environment error
+
+If a button script fails with a Python.NET internal error (e.g. `InternalPythonnetException`, `FileNotFoundException` loading a .NET assembly), **do not change the imports**. The standard Revit boilerplate (`clr.AddReference("RevitAPI")` + `from Autodesk.Revit.DB import *`) is correct and matches all working scripts in the project. Changing it to specific imports will cause real import errors (`ParameterType`, `BuiltInParameterGroup` do not exist in Revit 2025+) and contaminate the runtime for subsequent executions.
+
+### Diagnosis flow for button execution errors
+
+1. **Check if the same script works via `send_command`** — if yes, the script is correct.
+2. **Check if the error is a .NET assembly load failure** (e.g. `DesktopConnectorInterop`, `AcWebServices`) — this is an environment/session issue, not a script issue.
+3. **Do not touch imports.** Tell the user the session is contaminated and ask them to restart Revit.
+4. After restart, the button will work as expected.
+
+### Known environment error: AcWebServices / DesktopConnectorInterop
+
+```
+Python.Runtime.InternalPythonnetException: Failed to create Python type for AcWebServices
+---> System.IO.FileNotFoundException: Could not load file or assembly 'DesktopConnectorInterop'
+```
+
+This error is caused by Revit loading `AcWebServices.dll` (part of Revit core) which references `DesktopConnectorInterop`, a DLL that only exists if Autodesk Desktop Connector is installed. It is triggered by `clr.AddReference` calling `UpdateCLRModuleDict`, which enumerates all assemblies in the AppDomain. **It is not caused by our script.** The only fix is restarting Revit.
+
+---
+
 ## 5. Script Creation
 
 When asked to generate a script, since it is an iterative process, **scripts are not saved to source until the user explicitly says so**. Prepare the script and send it directly via `send_command`.
@@ -493,6 +519,59 @@ Control the visibility of the console where `print()` results and script errors 
 Only fall back to Bash/PowerShell for operations that genuinely require the local OS (e.g. installing packages with pip, or git commands). If a package is missing, install it once with pip locally and then use it from MCP going forward.
 
 If a library is missing from the whitelist and needed regularly, flag it so it can be added.
+
+---
+
+## 9.1 Reading Excel files via MCP
+
+**Usar siempre openpyxl primero. Si falla, pandas como fallback.**
+
+#### Opción 1 (preferida) — openpyxl
+
+```python
+import openpyxl
+
+wb = openpyxl.load_workbook(r"C:\path\to\file.xlsx", data_only=True)
+
+result = {}
+for sheet_name in wb.sheetnames:
+    ws = wb[sheet_name]
+    rows = [[str(v) if v is not None else "" for v in row] for row in ws.iter_rows(values_only=True)]
+    result[sheet_name] = {"rows": len(rows), "data": rows}
+
+ia_Result = result
+```
+
+#### Opción 2 (fallback) — pandas
+
+```python
+import pandas as pd
+
+xl = pd.ExcelFile(r"C:\path\to\file.xlsx")
+
+result = {}
+for sheet in xl.sheet_names:
+    df = xl.parse(sheet)
+    result[sheet] = {
+        "columns": list(df.columns),
+        "rows": len(df),
+        "data": df.fillna("").to_dict(orient="records")
+    }
+
+ia_Result = result
+```
+
+### Known issue: `module 'clr' has no attribute '_available_namespaces'`
+
+This error means the Revit/Navisworks process has a corrupted Python.NET state from startup. It is **not fixable at script level** — do not attempt workarounds (fake numpy injection, sys.meta_path manipulation, etc.). The only fix is **restarting the host application**.
+
+**Decision flow:**
+1. Send the simple pandas script above.
+2. If it succeeds → done.
+3. If it fails with `_available_namespaces` → tell the user the session needs a restart, explain it happens once per bad startup, and ask them to reopen Revit/Navisworks.
+4. After restart, send the exact same script — it will work.
+
+> **Never use Bash/PowerShell to read Excel files.** Never try openpyxl alone (it also imports numpy). Never try to patch sys.modules or sys.meta_path. Just pandas, and if broken — restart.
 
 ---
 
