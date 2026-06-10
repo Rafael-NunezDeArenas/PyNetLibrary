@@ -1,0 +1,862 @@
+# Auto-generated — Civil 26 — Autodesk.AutoCAD.Internal.DatabaseServices
+
+class Block1PointParameter(BlockParameter):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.Block1PointParameter"""
+    def __init__(self, *args) -> None: ...
+    PropertyDescription: BlockParameterPropertyDescriptorCollection
+    Name: str
+    PaperOrientation: PaperOrientationStates
+    Annotative: AnnotativeStates
+    HasFields: bool
+    AcadObject: object
+    ClassID: Guid
+    ObjectBirthVersion: FullDwgVersion
+    HasSaveVersionOverride: bool
+    IsObjectIdsInFlux: bool
+    UndoFiler: DwgFiler
+    IsAProxy: bool
+    IsTransactionResident: bool
+    IsReallyClosing: bool
+    IsCancelling: bool
+    IsUndoing: bool
+    IsNotifying: bool
+    IsNewObject: bool
+    IsModifiedGraphics: bool
+    IsModifiedXData: bool
+    IsModified: bool
+    IsNotifyEnabled: bool
+    IsWriteEnabled: bool
+    IsReadEnabled: bool
+    IsErased: bool
+    IsEraseStatusToggled: bool
+    XData: ResultBuffer
+    MergeStyle: DuplicateRecordCloning
+    ExtensionDictionary: ObjectId
+    Drawable: Drawable
+    Database: Database
+    Handle: Handle
+    OwnerId: ObjectId
+    ObjectId: ObjectId
+    Id: ObjectId
+    IsPersistent: bool
+    DrawStream: DrawStream
+    Bounds: Nullable
+    DrawableType: DrawableType
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+
+class Block2PointParameter(BlockParameter):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.Block2PointParameter"""
+    def __init__(self, *args) -> None: ...
+    PropertyDescription: BlockParameterPropertyDescriptorCollection
+    Name: str
+    PaperOrientation: PaperOrientationStates
+    Annotative: AnnotativeStates
+    HasFields: bool
+    AcadObject: object
+    ClassID: Guid
+    ObjectBirthVersion: FullDwgVersion
+    HasSaveVersionOverride: bool
+    IsObjectIdsInFlux: bool
+    UndoFiler: DwgFiler
+    IsAProxy: bool
+    IsTransactionResident: bool
+    IsReallyClosing: bool
+    IsCancelling: bool
+    IsUndoing: bool
+    IsNotifying: bool
+    IsNewObject: bool
+    IsModifiedGraphics: bool
+    IsModifiedXData: bool
+    IsModified: bool
+    IsNotifyEnabled: bool
+    IsWriteEnabled: bool
+    IsReadEnabled: bool
+    IsErased: bool
+    IsEraseStatusToggled: bool
+    XData: ResultBuffer
+    MergeStyle: DuplicateRecordCloning
+    ExtensionDictionary: ObjectId
+    Drawable: Drawable
+    Database: Database
+    Handle: Handle
+    OwnerId: ObjectId
+    ObjectId: ObjectId
+    Id: ObjectId
+    IsPersistent: bool
+    DrawStream: DrawStream
+    Bounds: Nullable
+    DrawableType: DrawableType
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+
+class BlockAction(BlockElement):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.BlockAction"""
+    def __init__(self, *args) -> None: ...
+    Name: str
+    PaperOrientation: PaperOrientationStates
+    Annotative: AnnotativeStates
+    HasFields: bool
+    AcadObject: object
+    ClassID: Guid
+    ObjectBirthVersion: FullDwgVersion
+    HasSaveVersionOverride: bool
+    IsObjectIdsInFlux: bool
+    UndoFiler: DwgFiler
+    IsAProxy: bool
+    IsTransactionResident: bool
+    IsReallyClosing: bool
+    IsCancelling: bool
+    IsUndoing: bool
+    IsNotifying: bool
+    IsNewObject: bool
+    IsModifiedGraphics: bool
+    IsModifiedXData: bool
+    IsModified: bool
+    IsNotifyEnabled: bool
+    IsWriteEnabled: bool
+    IsReadEnabled: bool
+    IsErased: bool
+    IsEraseStatusToggled: bool
+    XData: ResultBuffer
+    MergeStyle: DuplicateRecordCloning
+    ExtensionDictionary: ObjectId
+    Drawable: Drawable
+    Database: Database
+    Handle: Handle
+    OwnerId: ObjectId
+    ObjectId: ObjectId
+    Id: ObjectId
+    IsPersistent: bool
+    DrawStream: DrawStream
+    Bounds: Nullable
+    DrawableType: DrawableType
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+
+class BlockActionEntity(BlockElementEntity):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.BlockActionEntity"""
+    def __init__(self, *args) -> None: ...
+    Element: ObjectId
+    EdgeStyleId: ObjectId
+    FaceStyleId: ObjectId
+    VisualStyleId: ObjectId
+    ForceAnnoAllVisible: bool
+    BlockName: str
+    MaterialMapper: Mapper
+    MaterialId: ObjectId
+    Material: str
+    ReceiveShadows: bool
+    CastShadows: bool
+    Hyperlinks: HyperLinkCollection
+    CloneMeForDragging: bool
+    CompoundObjectTransform: Matrix3d
+    GeometricExtents: Extents3d
+    Ecs: Matrix3d
+    IsPlanar: bool
+    CollisionType: CollisionType
+    LineWeight: LineWeight
+    Visible: bool
+    LinetypeScale: float
+    LinetypeId: ObjectId
+    Linetype: str
+    LayerId: ObjectId
+    Layer: str
+    PlotStyleNameId: PlotStyleDescriptor
+    PlotStyleName: str
+    Transparency: Transparency
+    EntityColor: EntityColor
+    ColorIndex: int
+    Color: Color
+    BlockId: ObjectId
+    PaperOrientation: PaperOrientationStates
+    Annotative: AnnotativeStates
+    HasFields: bool
+    AcadObject: object
+    ClassID: Guid
+    ObjectBirthVersion: FullDwgVersion
+    HasSaveVersionOverride: bool
+    IsObjectIdsInFlux: bool
+    UndoFiler: DwgFiler
+    IsAProxy: bool
+    IsTransactionResident: bool
+    IsReallyClosing: bool
+    IsCancelling: bool
+    IsUndoing: bool
+    IsNotifying: bool
+    IsNewObject: bool
+    IsModifiedGraphics: bool
+    IsModifiedXData: bool
+    IsModified: bool
+    IsNotifyEnabled: bool
+    IsWriteEnabled: bool
+    IsReadEnabled: bool
+    IsErased: bool
+    IsEraseStatusToggled: bool
+    XData: ResultBuffer
+    MergeStyle: DuplicateRecordCloning
+    ExtensionDictionary: ObjectId
+    Drawable: Drawable
+    Database: Database
+    Handle: Handle
+    OwnerId: ObjectId
+    ObjectId: ObjectId
+    Id: ObjectId
+    IsPersistent: bool
+    DrawStream: DrawStream
+    Bounds: Nullable
+    DrawableType: DrawableType
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+
+class BlockElement(EvalConnectable):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.BlockElement"""
+    def __init__(self, *args) -> None: ...
+    Name: str
+    PaperOrientation: PaperOrientationStates
+    Annotative: AnnotativeStates
+    HasFields: bool
+    AcadObject: object
+    ClassID: Guid
+    ObjectBirthVersion: FullDwgVersion
+    HasSaveVersionOverride: bool
+    IsObjectIdsInFlux: bool
+    UndoFiler: DwgFiler
+    IsAProxy: bool
+    IsTransactionResident: bool
+    IsReallyClosing: bool
+    IsCancelling: bool
+    IsUndoing: bool
+    IsNotifying: bool
+    IsNewObject: bool
+    IsModifiedGraphics: bool
+    IsModifiedXData: bool
+    IsModified: bool
+    IsNotifyEnabled: bool
+    IsWriteEnabled: bool
+    IsReadEnabled: bool
+    IsErased: bool
+    IsEraseStatusToggled: bool
+    XData: ResultBuffer
+    MergeStyle: DuplicateRecordCloning
+    ExtensionDictionary: ObjectId
+    Drawable: Drawable
+    Database: Database
+    Handle: Handle
+    OwnerId: ObjectId
+    ObjectId: ObjectId
+    Id: ObjectId
+    IsPersistent: bool
+    DrawStream: DrawStream
+    Bounds: Nullable
+    DrawableType: DrawableType
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+
+class BlockElementEntity(Entity):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.BlockElementEntity"""
+    def __init__(self, *args) -> None: ...
+    Element: ObjectId
+    EdgeStyleId: ObjectId
+    FaceStyleId: ObjectId
+    VisualStyleId: ObjectId
+    ForceAnnoAllVisible: bool
+    BlockName: str
+    MaterialMapper: Mapper
+    MaterialId: ObjectId
+    Material: str
+    ReceiveShadows: bool
+    CastShadows: bool
+    Hyperlinks: HyperLinkCollection
+    CloneMeForDragging: bool
+    CompoundObjectTransform: Matrix3d
+    GeometricExtents: Extents3d
+    Ecs: Matrix3d
+    IsPlanar: bool
+    CollisionType: CollisionType
+    LineWeight: LineWeight
+    Visible: bool
+    LinetypeScale: float
+    LinetypeId: ObjectId
+    Linetype: str
+    LayerId: ObjectId
+    Layer: str
+    PlotStyleNameId: PlotStyleDescriptor
+    PlotStyleName: str
+    Transparency: Transparency
+    EntityColor: EntityColor
+    ColorIndex: int
+    Color: Color
+    BlockId: ObjectId
+    PaperOrientation: PaperOrientationStates
+    Annotative: AnnotativeStates
+    HasFields: bool
+    AcadObject: object
+    ClassID: Guid
+    ObjectBirthVersion: FullDwgVersion
+    HasSaveVersionOverride: bool
+    IsObjectIdsInFlux: bool
+    UndoFiler: DwgFiler
+    IsAProxy: bool
+    IsTransactionResident: bool
+    IsReallyClosing: bool
+    IsCancelling: bool
+    IsUndoing: bool
+    IsNotifying: bool
+    IsNewObject: bool
+    IsModifiedGraphics: bool
+    IsModifiedXData: bool
+    IsModified: bool
+    IsNotifyEnabled: bool
+    IsWriteEnabled: bool
+    IsReadEnabled: bool
+    IsErased: bool
+    IsEraseStatusToggled: bool
+    XData: ResultBuffer
+    MergeStyle: DuplicateRecordCloning
+    ExtensionDictionary: ObjectId
+    Drawable: Drawable
+    Database: Database
+    Handle: Handle
+    OwnerId: ObjectId
+    ObjectId: ObjectId
+    Id: ObjectId
+    IsPersistent: bool
+    DrawStream: DrawStream
+    Bounds: Nullable
+    DrawableType: DrawableType
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+
+class BlockFlipParameter(Block2PointParameter):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.BlockFlipParameter"""
+    def __init__(self, *args) -> None: ...
+    FlippedStateLabel: str
+    BaseStateLabel: str
+    PropertyDescription: BlockParameterPropertyDescriptorCollection
+    Name: str
+    PaperOrientation: PaperOrientationStates
+    Annotative: AnnotativeStates
+    HasFields: bool
+    AcadObject: object
+    ClassID: Guid
+    ObjectBirthVersion: FullDwgVersion
+    HasSaveVersionOverride: bool
+    IsObjectIdsInFlux: bool
+    UndoFiler: DwgFiler
+    IsAProxy: bool
+    IsTransactionResident: bool
+    IsReallyClosing: bool
+    IsCancelling: bool
+    IsUndoing: bool
+    IsNotifying: bool
+    IsNewObject: bool
+    IsModifiedGraphics: bool
+    IsModifiedXData: bool
+    IsModified: bool
+    IsNotifyEnabled: bool
+    IsWriteEnabled: bool
+    IsReadEnabled: bool
+    IsErased: bool
+    IsEraseStatusToggled: bool
+    XData: ResultBuffer
+    MergeStyle: DuplicateRecordCloning
+    ExtensionDictionary: ObjectId
+    Drawable: Drawable
+    Database: Database
+    Handle: Handle
+    OwnerId: ObjectId
+    ObjectId: ObjectId
+    Id: ObjectId
+    IsPersistent: bool
+    DrawStream: DrawStream
+    Bounds: Nullable
+    DrawableType: DrawableType
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+
+class BlockLookupAction(BlockAction):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.BlockLookupAction"""
+    def __init__(self, *args) -> None: ...
+    NumberOfRows: int
+    NumberOfOutputColumns: int
+    NumberOfInputColumns: int
+    Name: str
+    PaperOrientation: PaperOrientationStates
+    Annotative: AnnotativeStates
+    HasFields: bool
+    AcadObject: object
+    ClassID: Guid
+    ObjectBirthVersion: FullDwgVersion
+    HasSaveVersionOverride: bool
+    IsObjectIdsInFlux: bool
+    UndoFiler: DwgFiler
+    IsAProxy: bool
+    IsTransactionResident: bool
+    IsReallyClosing: bool
+    IsCancelling: bool
+    IsUndoing: bool
+    IsNotifying: bool
+    IsNewObject: bool
+    IsModifiedGraphics: bool
+    IsModifiedXData: bool
+    IsModified: bool
+    IsNotifyEnabled: bool
+    IsWriteEnabled: bool
+    IsReadEnabled: bool
+    IsErased: bool
+    IsEraseStatusToggled: bool
+    XData: ResultBuffer
+    MergeStyle: DuplicateRecordCloning
+    ExtensionDictionary: ObjectId
+    Drawable: Drawable
+    Database: Database
+    Handle: Handle
+    OwnerId: ObjectId
+    ObjectId: ObjectId
+    Id: ObjectId
+    IsPersistent: bool
+    DrawStream: DrawStream
+    Bounds: Nullable
+    DrawableType: DrawableType
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+    @staticmethod
+    def DuplicateCellsInLookupColumn(aryTable: Array, descArray: LookupColumnDescriptorCollection, colIdx: int, outArray: Array) -> bool: ...
+    @staticmethod
+    def DuplicateRowsOverInputColumns(aryTable: Array, descArray: LookupColumnDescriptorCollection, outArray: Array) -> bool: ...
+    def GetLookupTable(self, pDataTable: Array, descArray: LookupColumnDescriptorCollection) -> None: ...
+    @staticmethod
+    def NonSingletonRangeInInputColumns(aryTable: Array, descArray: LookupColumnDescriptorCollection, outArray: Array) -> bool: ...
+    @staticmethod
+    def NullsInInputColumns(aryTable: Array, descArray: LookupColumnDescriptorCollection, outArray: Array) -> bool: ...
+    def SetLookupTable(self, aryTable: Array, descArray: LookupColumnDescriptorCollection) -> None: ...
+
+class BlockLookupActionEntity(BlockActionEntity):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.BlockLookupActionEntity"""
+    def __init__(self, *args) -> None: ...
+    Element: ObjectId
+    EdgeStyleId: ObjectId
+    FaceStyleId: ObjectId
+    VisualStyleId: ObjectId
+    ForceAnnoAllVisible: bool
+    BlockName: str
+    MaterialMapper: Mapper
+    MaterialId: ObjectId
+    Material: str
+    ReceiveShadows: bool
+    CastShadows: bool
+    Hyperlinks: HyperLinkCollection
+    CloneMeForDragging: bool
+    CompoundObjectTransform: Matrix3d
+    GeometricExtents: Extents3d
+    Ecs: Matrix3d
+    IsPlanar: bool
+    CollisionType: CollisionType
+    LineWeight: LineWeight
+    Visible: bool
+    LinetypeScale: float
+    LinetypeId: ObjectId
+    Linetype: str
+    LayerId: ObjectId
+    Layer: str
+    PlotStyleNameId: PlotStyleDescriptor
+    PlotStyleName: str
+    Transparency: Transparency
+    EntityColor: EntityColor
+    ColorIndex: int
+    Color: Color
+    BlockId: ObjectId
+    PaperOrientation: PaperOrientationStates
+    Annotative: AnnotativeStates
+    HasFields: bool
+    AcadObject: object
+    ClassID: Guid
+    ObjectBirthVersion: FullDwgVersion
+    HasSaveVersionOverride: bool
+    IsObjectIdsInFlux: bool
+    UndoFiler: DwgFiler
+    IsAProxy: bool
+    IsTransactionResident: bool
+    IsReallyClosing: bool
+    IsCancelling: bool
+    IsUndoing: bool
+    IsNotifying: bool
+    IsNewObject: bool
+    IsModifiedGraphics: bool
+    IsModifiedXData: bool
+    IsModified: bool
+    IsNotifyEnabled: bool
+    IsWriteEnabled: bool
+    IsReadEnabled: bool
+    IsErased: bool
+    IsEraseStatusToggled: bool
+    XData: ResultBuffer
+    MergeStyle: DuplicateRecordCloning
+    ExtensionDictionary: ObjectId
+    Drawable: Drawable
+    Database: Database
+    Handle: Handle
+    OwnerId: ObjectId
+    ObjectId: ObjectId
+    Id: ObjectId
+    IsPersistent: bool
+    DrawStream: DrawStream
+    Bounds: Nullable
+    DrawableType: DrawableType
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+
+class BlockLookupParameter(Block1PointParameter):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.BlockLookupParameter"""
+    def __init__(self, *args) -> None: ...
+    PropertyDescription: BlockParameterPropertyDescriptorCollection
+    Name: str
+    PaperOrientation: PaperOrientationStates
+    Annotative: AnnotativeStates
+    HasFields: bool
+    AcadObject: object
+    ClassID: Guid
+    ObjectBirthVersion: FullDwgVersion
+    HasSaveVersionOverride: bool
+    IsObjectIdsInFlux: bool
+    UndoFiler: DwgFiler
+    IsAProxy: bool
+    IsTransactionResident: bool
+    IsReallyClosing: bool
+    IsCancelling: bool
+    IsUndoing: bool
+    IsNotifying: bool
+    IsNewObject: bool
+    IsModifiedGraphics: bool
+    IsModifiedXData: bool
+    IsModified: bool
+    IsNotifyEnabled: bool
+    IsWriteEnabled: bool
+    IsReadEnabled: bool
+    IsErased: bool
+    IsEraseStatusToggled: bool
+    XData: ResultBuffer
+    MergeStyle: DuplicateRecordCloning
+    ExtensionDictionary: ObjectId
+    Drawable: Drawable
+    Database: Database
+    Handle: Handle
+    OwnerId: ObjectId
+    ObjectId: ObjectId
+    Id: ObjectId
+    IsPersistent: bool
+    DrawStream: DrawStream
+    Bounds: Nullable
+    DrawableType: DrawableType
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+
+class BlockParameter(BlockElement):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.BlockParameter"""
+    def __init__(self, *args) -> None: ...
+    PropertyDescription: BlockParameterPropertyDescriptorCollection
+    Name: str
+    PaperOrientation: PaperOrientationStates
+    Annotative: AnnotativeStates
+    HasFields: bool
+    AcadObject: object
+    ClassID: Guid
+    ObjectBirthVersion: FullDwgVersion
+    HasSaveVersionOverride: bool
+    IsObjectIdsInFlux: bool
+    UndoFiler: DwgFiler
+    IsAProxy: bool
+    IsTransactionResident: bool
+    IsReallyClosing: bool
+    IsCancelling: bool
+    IsUndoing: bool
+    IsNotifying: bool
+    IsNewObject: bool
+    IsModifiedGraphics: bool
+    IsModifiedXData: bool
+    IsModified: bool
+    IsNotifyEnabled: bool
+    IsWriteEnabled: bool
+    IsReadEnabled: bool
+    IsErased: bool
+    IsEraseStatusToggled: bool
+    XData: ResultBuffer
+    MergeStyle: DuplicateRecordCloning
+    ExtensionDictionary: ObjectId
+    Drawable: Drawable
+    Database: Database
+    Handle: Handle
+    OwnerId: ObjectId
+    ObjectId: ObjectId
+    Id: ObjectId
+    IsPersistent: bool
+    DrawStream: DrawStream
+    Bounds: Nullable
+    DrawableType: DrawableType
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+    def GetPropertyConnectionName(self, propName: str) -> str: ...
+    def GetPropertyValue(self, name: str, xform: Matrix3d) -> object: ...
+
+class BlockParameterPropertyDescriptor:
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.BlockParameterPropertyDescriptor"""
+    def __init__(self, *args) -> None: ...
+    UnitsType: UnitsType
+    ValueSetValues: Array
+    HasValueSet: bool
+    PropertyDescription: str
+    Visible: bool
+    ReadOnly: bool
+    PropertyType: int
+    ConnectionName: str
+    PropertyName: str
+
+class BlockParameterPropertyDescriptorCollection(DisposableWrapper):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.BlockParameterPropertyDescriptorCollection"""
+    def __init__(self, *args) -> None: ...
+    Count: int
+    Item: BlockParameterPropertyDescriptor
+    IsSynchronized: bool
+    SyncRoot: object
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+    def CopyTo(self, array: list, size: int) -> None: ...
+    def GetEnumerator(self, ) -> IEnumerator: ...
+    def ICollectionCopyTo(self, array: Array, size: int) -> None: ...
+
+class BlockUserParameter(Block1PointParameter):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.BlockUserParameter"""
+    def __init__(self, *args) -> None: ...
+    UserParamType: UserParameterType
+    PropertyDescription: BlockParameterPropertyDescriptorCollection
+    Name: str
+    PaperOrientation: PaperOrientationStates
+    Annotative: AnnotativeStates
+    HasFields: bool
+    AcadObject: object
+    ClassID: Guid
+    ObjectBirthVersion: FullDwgVersion
+    HasSaveVersionOverride: bool
+    IsObjectIdsInFlux: bool
+    UndoFiler: DwgFiler
+    IsAProxy: bool
+    IsTransactionResident: bool
+    IsReallyClosing: bool
+    IsCancelling: bool
+    IsUndoing: bool
+    IsNotifying: bool
+    IsNewObject: bool
+    IsModifiedGraphics: bool
+    IsModifiedXData: bool
+    IsModified: bool
+    IsNotifyEnabled: bool
+    IsWriteEnabled: bool
+    IsReadEnabled: bool
+    IsErased: bool
+    IsEraseStatusToggled: bool
+    XData: ResultBuffer
+    MergeStyle: DuplicateRecordCloning
+    ExtensionDictionary: ObjectId
+    Drawable: Drawable
+    Database: Database
+    Handle: Handle
+    OwnerId: ObjectId
+    ObjectId: ObjectId
+    Id: ObjectId
+    IsPersistent: bool
+    DrawStream: DrawStream
+    Bounds: Nullable
+    DrawableType: DrawableType
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+
+class EvalConnectable(EvalExpr):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.EvalConnectable"""
+    def __init__(self, *args) -> None: ...
+    PaperOrientation: PaperOrientationStates
+    Annotative: AnnotativeStates
+    HasFields: bool
+    AcadObject: object
+    ClassID: Guid
+    ObjectBirthVersion: FullDwgVersion
+    HasSaveVersionOverride: bool
+    IsObjectIdsInFlux: bool
+    UndoFiler: DwgFiler
+    IsAProxy: bool
+    IsTransactionResident: bool
+    IsReallyClosing: bool
+    IsCancelling: bool
+    IsUndoing: bool
+    IsNotifying: bool
+    IsNewObject: bool
+    IsModifiedGraphics: bool
+    IsModifiedXData: bool
+    IsModified: bool
+    IsNotifyEnabled: bool
+    IsWriteEnabled: bool
+    IsReadEnabled: bool
+    IsErased: bool
+    IsEraseStatusToggled: bool
+    XData: ResultBuffer
+    MergeStyle: DuplicateRecordCloning
+    ExtensionDictionary: ObjectId
+    Drawable: Drawable
+    Database: Database
+    Handle: Handle
+    OwnerId: ObjectId
+    ObjectId: ObjectId
+    Id: ObjectId
+    IsPersistent: bool
+    DrawStream: DrawStream
+    Bounds: Nullable
+    DrawableType: DrawableType
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+
+class EvalExpr(DBObject):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.EvalExpr"""
+    def __init__(self, *args) -> None: ...
+    PaperOrientation: PaperOrientationStates
+    Annotative: AnnotativeStates
+    HasFields: bool
+    AcadObject: object
+    ClassID: Guid
+    ObjectBirthVersion: FullDwgVersion
+    HasSaveVersionOverride: bool
+    IsObjectIdsInFlux: bool
+    UndoFiler: DwgFiler
+    IsAProxy: bool
+    IsTransactionResident: bool
+    IsReallyClosing: bool
+    IsCancelling: bool
+    IsUndoing: bool
+    IsNotifying: bool
+    IsNewObject: bool
+    IsModifiedGraphics: bool
+    IsModifiedXData: bool
+    IsModified: bool
+    IsNotifyEnabled: bool
+    IsWriteEnabled: bool
+    IsReadEnabled: bool
+    IsErased: bool
+    IsEraseStatusToggled: bool
+    XData: ResultBuffer
+    MergeStyle: DuplicateRecordCloning
+    ExtensionDictionary: ObjectId
+    Drawable: Drawable
+    Database: Database
+    Handle: Handle
+    OwnerId: ObjectId
+    ObjectId: ObjectId
+    Id: ObjectId
+    IsPersistent: bool
+    DrawStream: DrawStream
+    Bounds: Nullable
+    DrawableType: DrawableType
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+
+class EvalGraph(DBObject):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.EvalGraph"""
+    def __init__(self, *args) -> None: ...
+    PaperOrientation: PaperOrientationStates
+    Annotative: AnnotativeStates
+    HasFields: bool
+    AcadObject: object
+    ClassID: Guid
+    ObjectBirthVersion: FullDwgVersion
+    HasSaveVersionOverride: bool
+    IsObjectIdsInFlux: bool
+    UndoFiler: DwgFiler
+    IsAProxy: bool
+    IsTransactionResident: bool
+    IsReallyClosing: bool
+    IsCancelling: bool
+    IsUndoing: bool
+    IsNotifying: bool
+    IsNewObject: bool
+    IsModifiedGraphics: bool
+    IsModifiedXData: bool
+    IsModified: bool
+    IsNotifyEnabled: bool
+    IsWriteEnabled: bool
+    IsReadEnabled: bool
+    IsErased: bool
+    IsEraseStatusToggled: bool
+    XData: ResultBuffer
+    MergeStyle: DuplicateRecordCloning
+    ExtensionDictionary: ObjectId
+    Drawable: Drawable
+    Database: Database
+    Handle: Handle
+    OwnerId: ObjectId
+    ObjectId: ObjectId
+    Id: ObjectId
+    IsPersistent: bool
+    DrawStream: DrawStream
+    Bounds: Nullable
+    DrawableType: DrawableType
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+    def GetAllNodes(self, ) -> list: ...
+    def GetNode(self, nodeId: int, mode: OpenMode, pTrans: Transaction) -> DBObject: ...
+
+class LookupColumnDescriptor(RXObject):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.LookupColumnDescriptor"""
+    def __init__(self, *args) -> None: ...
+    IsInvertible: bool
+    UnmatchedValue: str
+    IsOutputColumn: bool
+    PropertyUnits: UnitsType
+    PropertyType: int
+    ConnectionName: str
+    ConnectableId: int
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+
+class LookupColumnDescriptorCollection(DisposableWrapper):
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.LookupColumnDescriptorCollection"""
+    def __init__(self, *args) -> None: ...
+    Count: int
+    Item: LookupColumnDescriptor
+    IsSynchronized: bool
+    SyncRoot: object
+    AutoDelete: bool
+    IsDisposed: bool
+    UnmanagedObject: IntPtr
+    def Add(self, value: LookupColumnDescriptor) -> int: ...
+    def Clear(self, ) -> None: ...
+    def CopyTo(self, array: list, size: int) -> None: ...
+    def GetEnumerator(self, ) -> IEnumerator: ...
+    def ICollectionCopyTo(self, array: Array, size: int) -> None: ...
+    def Insert(self, index: int, value: LookupColumnDescriptor) -> None: ...
+    def Remove(self, value: LookupColumnDescriptor) -> None: ...
+    def RemoveAt(self, index: int) -> None: ...
+
+class UnitsType:
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.UnitsType"""
+    def __init__(self, *args) -> None: ...
+    ...
+
+class UserParameterType:
+    """.NET: Autodesk.AutoCAD.Internal.DatabaseServices.UserParameterType"""
+    def __init__(self, *args) -> None: ...
+    ...

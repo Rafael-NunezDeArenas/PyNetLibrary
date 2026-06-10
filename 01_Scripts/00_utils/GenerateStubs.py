@@ -23,13 +23,26 @@ try:
     HOST = "Revit"
     VERSION = _revit.Application.VersionNumber
 except NameError:
-    HOST = "Navisworks"
+    # Try Civil 3D before Navisworks
     try:
-        clr.AddReference("Autodesk.Navisworks.Api")
-        from Autodesk.Navisworks.Api import Application as _NavApp
-        VERSION = str(_NavApp.Version.RuntimeMajor)
+        clr.AddReference("AeccDbMgd")
+        from Autodesk.Civil.ApplicationServices import CivilApplication as _CivilApp
+        _civil_doc = _CivilApp.ActiveDocument
+        HOST = "Civil"
+        try:
+            clr.AddReference("AcMgd")
+            from Autodesk.AutoCAD.ApplicationServices import Application as _AcadApp
+            VERSION = _AcadApp.Version.Major
+        except Exception:
+            VERSION = "unknown"
     except Exception:
-        VERSION = "unknown"
+        HOST = "Navisworks"
+        try:
+            clr.AddReference("Autodesk.Navisworks.Api")
+            from Autodesk.Navisworks.Api import Application as _NavApp
+            VERSION = str(_NavApp.Version.RuntimeMajor)
+        except Exception:
+            VERSION = "unknown"
 
 print(f"Host: {HOST} {VERSION}")
 
@@ -46,10 +59,11 @@ ASSEMBLY_SETS = {
         "RevitAPIUI",
     ],
     "Civil": [
-        "RevitAPI",
-        "RevitAPIUI",
-        "AeccXUiLand",
-        "AeccXDbLand",
+        "AcMgd",
+        "AcCoreMgd",
+        "AcDbMgd",
+        "AecBaseMgd",
+        "AeccDbMgd",
     ],
 }
 
@@ -183,12 +197,12 @@ for asm_name in ASSEMBLIES:
     except Exception as e:
         print(f"  SKIP:   {asm_name} — {e}")
 
-loaded = {a.GetName().Name: a for a in AppDomain.CurrentDomain.GetAssemblies()}
+loaded = {a.GetName().Name.lower(): a for a in AppDomain.CurrentDomain.GetAssemblies()}
 
 # ── Collect types by namespace ─────────────────────────────────────────────────
 ns_types: dict = defaultdict(list)
 for asm_name in ASSEMBLIES:
-    asm = loaded.get(asm_name)
+    asm = loaded.get(asm_name.lower())
     if asm is None:
         continue
     try:

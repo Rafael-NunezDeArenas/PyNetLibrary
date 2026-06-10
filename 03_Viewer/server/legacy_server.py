@@ -1,8 +1,11 @@
 """
-PyNET Viewer — Servidor HTTP standalone para servir IFC + Viewer + Dashboard.
-Ejecutar desde terminal (NO desde Navisworks):
+PyNET Viewer — LEGACY standalone HTTP server (dev/troubleshooting only).
+Serves a directory of loose IFC files + Viewer + Dashboard from the Python stdlib.
+For the current product flow (.pnt package + desktop window + .exe) use pnt_server.py.
 
-    python 03_Viewer/server/serve.py --ifc-dir "C:/ruta/a/ifcs" --port 8080
+Run from a terminal (NOT from Navisworks):
+
+    python 03_Viewer/server/legacy_server.py --ifc-dir "C:/ruta/a/ifcs" --port 8080
 """
 
 import argparse

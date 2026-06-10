@@ -1,32 +1,31 @@
 import clr
 from pathlib import Path
-from System import Environment
 
 clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import *
 
-app = __revit__.Application
-doc = __revit__.ActiveUIDocument.Document
+app = __revit__.Application #type:ignore
+doc = __revit__.ActiveUIDocument.Document #type:ignore
 
 
 class EditecaSharedParamCreator:
 
     PARAMS = [
         # (pset, name, type_key, is_type, dim)
-        ("Test_3D", "Test_3D_Clasificacion",       "TEXT",    True,  "3D"),
-        ("Test_3D", "Test_3D_CodigoTipo",           "TEXT",    True,  "3D"),
-        ("Test_3D", "Test_3D_Descripcion",          "TEXT",    True,  "3D"),
-        ("Test_3D", "Test_3D_Disciplina",           "TEXT",    True,  "3D"),
-        ("Test_4D", "Test_4D_Fase",                 "TEXT",    False, "4D"),
-        ("Test_4D", "Test_4D_CodigoRecurso",        "TEXT",    False, "4D"),
-        ("Test_4D", "Test_4D_FechaInicioPrevista",  "TEXT",    False, "4D"),
-        ("Test_4D", "Test_4D_FechaFinPrevista",     "TEXT",    False, "4D"),
-        ("Test_4D", "Test_4D_Duracion",             "INTEGER", False, "4D"),
-        ("Test_4D", "Test_4D_CodigoObra",           "TEXT",    False, "4D"),
-        ("Test_5D", "Test_5D_CodigoRecurso",        "TEXT",    True,  "5D"),
-        ("Test_5D", "Test_5D_CapituloPresupuesto",  "TEXT",    True,  "5D"),
-        ("Test_5D", "Test_5D_CosteUnitario",        "NUMBER",  True,  "5D"),
-        ("Test_5D", "Test_5D_Proveedor",            "TEXT",    True,  "5D"),
+        ("PyNET_3D", "PyNET_3D_Clasificacion",       "TEXT",    True,  "3D"),
+        ("PyNET_3D", "PyNET_3D_CodigoTipo",           "TEXT",    True,  "3D"),
+        ("PyNET_3D", "PyNET_3D_Descripcion",          "TEXT",    True,  "3D"),
+        ("PyNET_3D", "PyNET_3D_Disciplina",           "TEXT",    True,  "3D"),
+        ("PyNET_4D", "PyNET_4D_Fase",                 "TEXT",    False, "4D"),
+        ("PyNET_4D", "PyNET_4D_CodigoRecurso",        "TEXT",    True, "4D"),
+        ("PyNET_4D", "PyNET_4D_FechaInicioPrevista",  "TEXT",    False, "4D"),
+        ("PyNET_4D", "PyNET_4D_FechaFinPrevista",     "TEXT",    False, "4D"),
+        ("PyNET_4D", "PyNET_4D_Duracion",             "INTEGER", False, "4D"),
+        ("PyNET_4D", "PyNET_4D_CodigoObra",           "TEXT",    False, "4D"),
+        ("PyNET_5D", "PyNET_5D_CodigoRecurso",        "TEXT",    True,  "5D"),
+        ("PyNET_5D", "PyNET_5D_CapituloPresupuesto",  "TEXT",    True,  "5D"),
+        ("PyNET_5D", "PyNET_5D_CosteUnitario",        "NUMBER",  True,  "5D"),
+        ("PyNET_5D", "PyNET_5D_Proveedor",            "TEXT",    True,  "5D"),
     ]
 
     BICS_ALL = [
@@ -73,9 +72,9 @@ class EditecaSharedParamCreator:
             }
         except:
             return {
-                "TEXT":    ParameterType.Text,
-                "INTEGER": ParameterType.Integer,
-                "NUMBER":  ParameterType.Number,
+                "TEXT":    ParameterType.Text, #type:ignore Old API
+                "INTEGER": ParameterType.Integer, #type:ignore Old API
+                "NUMBER":  ParameterType.Number, #type:ignore Old API
             }
 
     @staticmethod
@@ -85,9 +84,9 @@ class EditecaSharedParamCreator:
                     "4D": GroupTypeId.Phasing,
                     "5D": GroupTypeId.Data}[dim]
         except:
-            return {"3D": BuiltInParameterGroup.PG_IDENTITY_DATA,
-                    "4D": BuiltInParameterGroup.PG_PHASING,
-                    "5D": BuiltInParameterGroup.PG_DATA}[dim]
+            return {"3D": BuiltInParameterGroup.PG_IDENTITY_DATA, #type:ignore Old API
+                    "4D": BuiltInParameterGroup.PG_PHASING, #type:ignore Old API
+                    "5D": BuiltInParameterGroup.PG_DATA}[dim] #type:ignore Old API
 
     @staticmethod
     def build_cat_set(bics):
@@ -103,8 +102,9 @@ class EditecaSharedParamCreator:
 
     @staticmethod
     def create_shared_param_file():
-        desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
-        sp_path = str(Path(desktop) / "Test_SharedParameters.txt")
+        sp_dir = Path.home() / "AppData" / "Roaming" / "Pynet" / "Revit"
+        sp_dir.mkdir(parents=True, exist_ok=True)
+        sp_path = str(sp_dir / "PyNET_SharedParameters.txt")
         with open(sp_path, "w", encoding="utf-8") as f:
             f.write("# This is a Revit shared parameter file.\n# Do not edit manually.\n")
         app.SharedParametersFilename = sp_path
@@ -133,7 +133,7 @@ class EditecaSharedParamCreator:
 
         for pset, name, type_key, is_type, dim in EditecaSharedParamCreator.PARAMS:
             defn    = definitions[name]
-            cat_set = cat_set_prv if name == "Test_5D_Proveedor" else cat_set_all
+            cat_set = cat_set_prv if name == "PyNET_5D_Proveedor" else cat_set_all
             binding = app.Create.NewTypeBinding(cat_set) if is_type else app.Create.NewInstanceBinding(cat_set)
             pg      = EditecaSharedParamCreator.get_param_group(dim)
             try:
