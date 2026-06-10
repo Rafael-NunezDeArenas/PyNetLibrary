@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="https://github.com/rafa2403nunez-droid/PyNetLibrary/blob/main/Assets/PyNetLibrary.png" width="300"/>
+  <img src="https://github.com/rafa2403nunez-droid/PyNetLibrary/blob/main/Assets/PyNetLibrary.png" width="400"/>
 </p>
 
 # PyNet Library
 
 **API context and reference scripts for Autodesk applications (Navisworks, Revit, Civil 3D)**, designed for the **[PyNet Platform](https://github.com/rafa2403nunez-droid/PyNet)**. This repo provides Python-style **stubs** of the Autodesk .NET APIs and example scripts, so that AI models (and developers) have the context they need to generate and understand automation code that runs through PyNet's embedded **Python.NET** engine.
 
-> **AI Users:** This README and the stub files under `01_Scripts/` are the primary context sources for generating scripts. Read the execution environment and boilerplate sections before writing any code.
+> **AI Users:** This README, the API stubs under `02_PyNet Stubs/`, and the example scripts under `01_Scripts/` are the primary context sources for generating scripts. Read the execution environment and boilerplate sections before writing any code.
 
 ---
 
@@ -17,6 +17,7 @@ If you are an AI model or developer, you can quickly verify the environment with
 **Navisworks:**
 ```python
 import clr
+clr.AddReference("Autodesk.Navisworks.Api")
 from Autodesk.Navisworks.Api import Application
 
 doc = Application.ActiveDocument
@@ -168,6 +169,45 @@ from System.Drawing import *
 from Autodesk.Revit.UI import TaskDialog, TaskDialogCommonButtons, TaskDialogIcon
 ```
 
+### AutoCAD / Civil 3D
+
+Civil 3D runs on the AutoCAD platform and appears as **"AutoCAD"** in the active-instance list.
+
+```python
+import clr
+from pathlib import Path
+
+clr.AddReference("AcMgd")
+clr.AddReference("AcCoreMgd")
+clr.AddReference("AcDbMgd")
+# Civil 3D only — add the AEC/Civil assemblies:
+clr.AddReference("AecBaseMgd")
+clr.AddReference("AeccDbMgd")
+
+from Autodesk.AutoCAD.ApplicationServices import Application as AcadApp
+from Autodesk.AutoCAD.DatabaseServices import *
+from Autodesk.AutoCAD.EditorInput import Editor
+from Autodesk.Civil.ApplicationServices import CivilApplication   # Civil 3D only
+from Autodesk.Civil.DatabaseServices import *                     # Civil 3D only
+
+doc = AcadApp.DocumentManager.MdiActiveDocument
+db = doc.Database
+ed = doc.Editor
+civil_doc = CivilApplication.ActiveDocument                       # Civil 3D only
+```
+
+Write operations must be wrapped in a locked transaction:
+```python
+with doc.LockDocument():
+    t = db.TransactionManager.StartTransaction()
+    try:
+        # write operations
+        t.Commit()
+    except:
+        t.Abort()
+        raise
+```
+
 ## 🧪 Minimal Working Example
 
 This example verifies that the Navisworks API and PyNet execution environment are correctly configured:
@@ -236,7 +276,7 @@ FeatureManager.Run(doc)
 
 ## 🔍 Stub Usage
 
-The stub files (e.g. `01_Scripts/01_Navisworks/00_Stubs/`) provide a Python-style representation of the Autodesk .NET APIs.
+The stub files under `02_PyNet Stubs/Autodesk/` (one folder per host: `Navisworks/`, `Revit/`, `AutoCAD/`, `Civil/`, `Aec/`) provide a Python-style representation of the Autodesk .NET APIs.
 
 ### Purpose
 - Provide type hints and method signatures
@@ -267,17 +307,19 @@ This repository contains two main types of resources:
 
 Working scripts organized by use case:
 
+- **Workflows** (`00_Workflows/`) — multi-step combined workflows (model update, coordination dashboard, coordination workflow).
 - **Model Management** (`01_ModelManagement/`) — open, append, list and publish NWD files using the core Document API.
 - **Search Sets** (`02_SearchSets/`) — create Search Sets from property conditions (`SearchCondition`, `VariantData`, `SearchLocations`).
 - **Clash Detection** (`03_ClashDetection/`) — export, import, rename, run and auto-review clash tests; add comments; extract element info; generate clash images. Works with `doc.Clash.TestsData.Tests` via `CastUtils`.
-- **Data Analysis** (`04_DataAnalysis/`) — chart generation from clash data (bar charts, pie charts, stacked bars); interactive clash dashboard with IFC viewer integration.
-- **Query Elements** (`05_QueryElements/`) — isolate and measure elements by property filters (foundations, panels, wall linear meters, unique parameter values).
+- **Data Analysis** (`04_DataAnalysis/`, `08_DataAnalysis/`) — chart generation from clash data (bar charts, pie charts, stacked bars); interactive clash dashboard with IFC viewer integration.
+- **Query Elements** (`05_QueryElements/`) — isolate and measure elements by property filters (foundations, panels, wall linear meters, unique parameter values); export clashes to JSON.
 - **IFC Export** (`07_IFCExport/`) — geometry extraction and export to IFC/PNT format; includes a fast instanced-node exporter (`NavisworksPNT_IFC_Fast`) with per-category routing (FAST/INSTNODE/DIRECT).
 
 ### Revit — 01_Scripts/02_Revit/
 
 Working scripts organized by use case:
 
+- **Workflow** (`00_Workflow/`) — model sync, NWC export, parameter updates, key schedules, multi-model open/update, data transfer.
 - **Selection — User Input** (`01_Selection User/`) — interactive element picking via `PickObject`, `PickObjects`, rectangle selection, and extending existing selections.
 - **Selection — Filters** (`02_Selection Filter/`) — `FilteredElementCollector` patterns grouped by filter type:
   - *Quick filters* — `ElementCategoryFilter`, `ElementClassFilter`, `BoundingBoxIntersectsFilter`, `BoundingBoxInsideFilter`, `BoundingBoxContainsPointFilter`, `FamilySymbolFilter`, `ElementStructuralTypeFilter`, `IsCurveDrivenElementFilter`, `IsElementTypeFilter`, `ElementIdSetFilter`, `ElementDesignOptionFilter`, `ElementOwnerViewFilter`, `MultiCategoryFilter`, `MultiClassFilter`, `ExclusionFilter`
@@ -295,8 +337,23 @@ Working scripts organized by use case:
 - **Worksharing** (`20_Worksharing/`) — read Autodesk user login info from a workshared model.
 - **Structure** (`23_Structure/`) — create structural beams, columns, wall foundations, and trusses using `NewFamilyInstance` and `NewBeam`.
 - **MEP** (`24_MEP/`) — create ducts (`Duct.Create`) and electrical wires (`Wire.Create`) with connectors and curve endpoints.
+- **QA/QC** (`25_QAQC/`) — model audit against BEP standards with HTML + Excel scored report (`ModelAudit.py`); type renaming to fix nomenclature.
+- **5D** (`26_5D/`) — quantity takeoff / budget extraction: matches model quantities to a reference Excel and generates a measurement breakdown + interactive HTML report (`QuantityTakeoff.py`).
 
-### Civil 3D — 01_Scripts/03_Civil3D/ *(coming soon)*
+### AutoCAD / Civil 3D — 01_Scripts/03_AutoCAD/
+
+Civil 3D runs on the AutoCAD platform and appears as **"AutoCAD"** in the active-instance list. Working scripts organized by use case:
+
+- **Layers** (`01_Layers/`) — list and manage layers.
+- **Blocks** (`02_Blocks/`) — list block definitions; insert blocks.
+- **Entities** (`03_Entities/`) — list model-space entities; read, create and use property sets; zoom to objects by property set.
+- **Windows Forms** (`04_WinForms/`) — WinForms in AutoCAD: create DWG files from a dialog; edit existing DWGs (background and UI patterns).
+- **Layouts** (`05_Layouts/`) — list layouts.
+- **Alignments** (`10_Alignments/`) — list Civil 3D alignments.
+- **Profiles** (`11_Profiles/`) — list profiles.
+- **Surfaces** (`12_Surfaces/`) — list surfaces and surface statistics.
+- **Corridors** (`13_Corridors/`) — list corridors.
+- **Pipe Networks** (`15_Pipe_Networks/`) — list pipe networks.
 
 Example — `SearchSetsManager.CreateSet` from 02_SearchSets/GenerateSearchSets.py:
 
@@ -428,10 +485,17 @@ Embeddable web component built with **ThatOpen Components** for visualizing fede
 03_Viewer/
   src/           → Viewer TypeScript (ThatOpen + Three.js)
   dashboard/     → Dashboard HTML + Plotly (clash table, charts)
-  server/        → Standalone Python HTTP server (serve.py)
+  server/        → Python servers: pnt_server.py (current) + legacy_server.py
   public/worker/ → Web Worker for fragment parsing
-  dist/          → Production build (generated with vite build)
+  dist/          → Viewer production build (generated with vite build)
+  dist_exe/      → Packaged standalone .exe of the dashboard (PyInstaller)
 ```
+
+### The `.pnt` package
+
+A `.pnt` file is the portable coordination package: a **ZIP bundle** containing the federated
+IFC models (`models/*.ifc`) plus the clash data (`clashes.json`). It makes a whole coordination
+snapshot a single self-contained file that opens in the dashboard without any loose files.
 
 ### Launch from Navisworks (recommended)
 
@@ -447,20 +511,46 @@ The script is located at `01_Scripts/01_Navisworks/04_DataAnalysis/ExportClashDa
 
 > **Important limitation:** The web server (Dash/Flask) only works when launched from a **WinForms** context (`Form.ShowDialog()`). Launching Dash from a direct MCP script (`send_command`) causes a deadlock due to the Python.NET GIL. This is why the script uses a Form as its entry point — the server thread is created from the Form button event, not from the MCP context.
 
-### Launch from PowerShell (development/troubleshooting only)
+### Open a `.pnt` package — `pnt_server.py` (current)
 
-> **This method requires user approval.** The standard workflow is always from Navisworks (button or MCP). PowerShell is only used for development or when the Ribbon button is not available.
+`pnt_server.py` is the product server: a Flask/Dash app wrapped in a **PyWebView desktop window**.
+It opens a `.pnt`, extracts it to `~/.pynet_viewer/<name>/`, and shows the viewer + dashboard.
+
+```powershell
+cd C:\Users\34655\source\repos\GithubRNM\PyNetLibrary\03_Viewer\server
+
+python pnt_server.py                 # opens a file picker to choose a .pnt
+python pnt_server.py project.pnt     # opens a specific package directly
+python pnt_server.py --port 8096     # custom port (default 8095)
+```
+
+#### Standalone `.exe` (no Python required)
+
+`pnt_server.py` can be packaged into a single distributable executable with PyInstaller — this is
+what `dist_exe/` (and `server/BIM-Dashboard.spec`) hold. End users just double-click the `.exe`,
+pick their `.pnt`, and explore the model + clashes without installing anything.
+
+```powershell
+cd C:\Users\34655\source\repos\GithubRNM\PyNetLibrary\03_Viewer\server
+pyinstaller pnt_server.py --onefile --noconsole --add-data "../dashboard;dashboard" --add-data "../dist;dist"
+```
+
+### Legacy — serve a folder of loose IFCs (`legacy_server.py`)
+
+> Development / troubleshooting only, and requires user approval. The standard flow is the `.pnt`
+> package above (or the Navisworks button). `legacy_server.py` is the older Python-stdlib server that
+> serves a directory of IFC files directly, with no `.pnt` packaging.
 
 <details>
-<summary>Show PowerShell instructions</summary>
+<summary>Show legacy instructions</summary>
 
 **Step 1 — Export data from Navisworks (via MCP or button)**
 
 **Step 2 — Start the HTTP server**
 
 ```powershell
-cd C:\Users\RafaelNúñezdeArenas\source\repos\GithubRNM\PyNetLibrary\03_Viewer
-python server\serve.py --ifc-dir "C:\path\to\ifcs" --port 8095
+cd C:\Users\34655\source\repos\GithubRNM\PyNetLibrary\03_Viewer
+python server\legacy_server.py --ifc-dir "C:\path\to\ifcs" --port 8095
 ```
 
 **Step 3 — Open the dashboard**
@@ -479,7 +569,7 @@ http://localhost:8095/viewer/?models=model1.ifc,model2.ifc
 ### Rebuild the viewer (after changes in src/)
 
 ```powershell
-cd C:\Users\RafaelNúñezdeArenas\source\repos\GithubRNM\PyNetLibrary\03_Viewer
+cd C:\Users\34655\source\repos\GithubRNM\PyNetLibrary\03_Viewer
 npm install
 npm run build
 ```
@@ -487,10 +577,10 @@ npm run build
 ### Development with hot-reload
 
 ```powershell
-cd C:\Users\RafaelNúñezdeArenas\source\repos\GithubRNM\PyNetLibrary\03_Viewer
+cd C:\Users\34655\source\repos\GithubRNM\PyNetLibrary\03_Viewer
 npm run dev
-# Vite at http://localhost:5173 — requires serve.py on port 8080 for IFC files
-python server\serve.py --ifc-dir "C:\path\to\ifcs" --port 8080
+# Vite at http://localhost:5173 — requires legacy_server.py on port 8080 for IFC files
+python server\legacy_server.py --ifc-dir "C:\path\to\ifcs" --port 8080
 ```
 
 ### Viewer public API (for integration)

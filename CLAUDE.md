@@ -1,661 +1,162 @@
-# Project Context — PyNET Platform (Navisworks & Revit)
+# Project Context — PyNET Platform (Navisworks · Revit · AutoCAD/Civil 3D)
 
-## 1. Execution Environment
-
-PyNET supports two hosts: **Autodesk Navisworks** and **Autodesk Revit**. Both execute Python scripts via **Python.NET** (CPython 3.10+ with `pythonnet` — not IronPython). Full Python 3 syntax is supported, along with the `clr` bridge to access .NET and Autodesk APIs.
-
-Scripts are sent to the plugin through the MCP bridge and executed locally inside the host process. Always check `list_active_instances` first to identify which host is running (Navisworks or Revit) and its PID — the boilerplate and available APIs differ between hosts.
-
-> **Timeout rule:** Always use a minimum timeout of **60 seconds** when calling `send_command`. Scripts can take longer than expected depending on model size.
-
-> **MCP bridge version:** Run `pip show pynet-mcp-bridge` (NOT `pynet-bridge`) using the Python 3.10 pip at `C:\Users\34655\AppData\Local\Programs\Python\Python310\Scripts\pip.exe`. Current installed version: **1.4.7**.
+This file is the **always-loaded core**: rules that apply to every interaction. Host-specific
+boilerplate, WinForms, stubs, Excel, security lists and UI deployment live in `docs/` and are
+loaded **on demand** — see the Router below. Read the matching guide *before* writing a script.
 
 ---
 
-## 2. Execution Responses
+## 1. Execution environment
 
-### Scenario A: Success
+PyNET runs Python scripts inside three Autodesk hosts: **Navisworks**, **Revit**, and
+**AutoCAD / Civil 3D**. All execute via **Python.NET** (CPython 3.10+ with `pythonnet` — not
+IronPython). Full Python 3 syntax plus the `clr` bridge to .NET and the Autodesk APIs.
 
-```json
-{
-  "ScriptName": "SayHi_AI_Running",
-  "ExecutionDate": "2026-03-30T15:42:12.8640716+02:00",
-  "Status": "Success",
-  "Message": "Script executed successfully",
-  "PrintMessages": [
-    "Hello Pablo"
-  ],
-  "Duration": "00:00:00.0312442",
-  "Data": []
-}
-```
+Scripts are sent to the plugin through the MCP bridge and executed locally inside the host process.
 
-### Scenario B: Error (PythonException with StackTrace)
-This is the format received when Python code fails. Analyze `Message` to auto-correct:
+> **Always check `list_active_instances` first** to identify the running host and PID — boilerplate
+> and APIs differ per host. Civil 3D appears as **"AutoCAD"** in the instance list.
 
-```json
-{
-  "ScriptName": "SayHi_AI_Running",
-  "ExecutionDate": "2026-03-30T15:52:56.1204577+02:00",
-  "Status": "Error",
-  "Message": "Python.Runtime.PythonException: '(' was never closed (<string>, line 2)...",
-  "PrintMessages": [],
-  "Duration": "00:00:00",
-  "Data": []
-}
-```
+> **Timeout rule:** always use a minimum timeout of **60 seconds** when calling `send_command`.
+
+> **MCP bridge:** `pip show pynet-mcp-bridge` (NOT `pynet-bridge`) using Python 3.10 pip at
+> `C:\Users\34655\AppData\Local\Programs\Python\Python310\Scripts\pip.exe`. Installed: **1.4.9**.
 
 ---
 
-## 3. Script Output
+## 2. Router — read the matching guide BEFORE writing a script
 
-Scripts can return structured data via a global variable that the plugin collects automatically.
+| If the task is… | Read first (`Read`) |
+|---|---|
+| A **Navisworks** script | [docs/navisworks.md](docs/navisworks.md) |
+| A **Revit** script | [docs/revit.md](docs/revit.md) |
+| A Revit **element query / measurement** | [.claude/commands/RevitApiPatterns.md](.claude/commands/RevitApiPatterns.md) |
+| An **AutoCAD / Civil 3D** script | [docs/autocad-civil.md](docs/autocad-civil.md) |
+| Any **form / dialog / custom UI** (WinForms) | [docs/winforms.md](docs/winforms.md) |
+| Reading an **Excel** file | [docs/excel-mcp.md](docs/excel-mcp.md) |
+| **Generating stubs** / VS Code IntelliSense | [docs/stubs.md](docs/stubs.md) |
+| **Deploying buttons / modules / Output Window** | [docs/ui-deployment.md](docs/ui-deployment.md) |
+| Full **security** whitelist/blocklist | [docs/security.md](docs/security.md) |
 
-### Output Variable
+The Router row above (`RevitApiPatterns`) is a **reference** to read before writing Revit queries —
+it lives in `.claude/commands/` but is consulted, not run.
 
-The variable name must be:
+Everything else in `.claude/commands/` is a **workflow Skill** the *user* invokes via slash command:
+`/ClashDetection`, `/ClashCoordination`, `/QCModelAudit`, `/QuantityTakeoff`, `/DevMode`. They are
+self-contained and auto-load when invoked — do not duplicate their content here. Suggest the matching
+one when the user describes its task (e.g. a clash run, a QC audit, a 5D takeoff).
 
-```
-ia_Result
-```
+---
 
-The system will look for this variable after script execution. If it does not exist, no data output will be generated.
+## 3. Context sources — use in this order
 
-### Print vs ia_Result
+Be efficient: check existing context before writing from scratch.
 
-The Navisworks plugin has a visible **Output Window** where every `print()` is displayed to the user in real time. This means:
+1. **`AI_History/`** (check first) — full log of every script run through the bridge.
+   `Requests/` (sent scripts), `Responses/` (results/errors), `Pipe_Session_*.log`. If a similar
+   problem was already solved, reuse the validated pattern.
+2. **Example scripts (MANDATORY before writing from scratch)** — `01_Scripts/01_Navisworks/`,
+   `01_Scripts/02_Revit/`, `01_Scripts/03_AutoCAD/`. Use `Glob` to list the relevant folder, then
+   `Read` the closest match. The library is validated and production-ready.
+3. **Live API exploration** — write a short `send_command` script to inspect the actual model at
+   runtime. The live model is the most accurate reference.
+4. **API stubs** — `02_PyNet Stubs/` (50k+ lines; never read in full — search a specific name only).
 
-- **During iterative development** (scripts sent via `send_command`): use `ia_Result` as the primary channel to return structured data back to the AI. Keep `print` usage minimal — only for brief status messages (e.g. `"Found 41 wall types"`). Do NOT flood the Output Window with per-element or per-iteration prints.
-- **When saving a script for the user** (deployed to a button or saved to source): add meaningful `print` statements so the user gets clear feedback when running the script manually (progress, results summary, confirmations). In this case, `ia_Result` is optional since the user reads the Output Window directly.
+---
 
-In short: `ia_Result` is for AI consumption, `print` is for user consumption. During development keep prints quiet; in final saved scripts make them informative.
+## 4. Execution responses
 
-Do not abbreviate output values or apply any transformation unless explicitly requested.
+Scripts return JSON. On **Success**, `Status: "Success"` with `PrintMessages` and `Data`.
+On **Error**, `Status: "Error"` with `Message` carrying the `Python.Runtime.PythonException` and
+stack trace — analyze `Message` to auto-correct and retry.
 
-### Data Format
+---
 
-`ia_Result` must contain a JSON-serializable structure, typically:
+## 5. Script output — `ia_Result` vs `print`
 
-- a list of dicts
-- or a single dict
+The plugin collects a global variable named **`ia_Result`** after execution (JSON-serializable:
+list of dicts or a single dict). If absent, no data output is generated.
 
-Recommended example (list of items):
+- **During development** (scripts via `send_command`): use `ia_Result` as the primary channel for
+  structured data back to the AI. Keep `print` minimal (brief status only) — do NOT flood the
+  Navisworks Output Window with per-element prints.
+- **When saving a script for the user** (button / source): add informative `print` statements
+  (progress, summary, results). `ia_Result` is then optional.
+
+Rules: serializable values only (numbers, strings, lists, dicts); never return complex objects —
+convert to `dict` first; always include a `"type"` field per object; keep structure consistent
+across scripts. Do not abbreviate or transform output values unless explicitly asked.
 
 ```python
-ia_Result = [
-    {
-        "type": "Wall",
-        "id": 1,
-        "name": "Wall A",
-        "height": 3.2
-    }
-]
+ia_Result = [{"type": "Wall", "id": 1, "name": "Wall A", "height": 3.2}]
 ```
-
-### Important Rules
-
-- Data must be serializable (numbers, strings, lists, dicts)
-- Never return complex Python objects (classes, API references, etc.)
-- Always convert objects to `dict` before returning them
-- Always include a `"type"` field in each object for easy interpretation
-- Maintain a consistent structure across scripts
 
 ---
 
-## 4. Security & Execution Restrictions
+## 6. Script creation & execution
 
-All scripts are validated by a static analyzer before execution. The scope is strictly limited to **Autodesk Navisworks automation** — no file system access, no network operations, no system-level actions.
+Scripts are an iterative process — **not saved to source until the user explicitly says so**.
+Prepare and send directly via `send_command`.
 
-### Allowed CLR Assemblies
-Only these .NET references are permitted via `clr.AddReference`:
-- `Autodesk.Navisworks.Api`, `.ComApi`, `.Interop.ComApi`, `.Clash`
-- `System`, `System.Windows.Forms`, `System.Drawing`, `System.Collections.Generic`
-- `Raen.Core.Pynet.*`, `Raen.Navisworks.Pynet.*` (any version)
-
-Any other assembly will be rejected.
-
-### Allowed Python Imports
-`clr`, `sys`, `json`, `re`, `time`, `datetime`, `pathlib`, `typing`, `threading`, `collections`, `xml`, `pandas`, `plotly`, `matplotlib`, `dash`, `webbrowser`, `psutil`, `openpyxl`
-
-> **Note (Revit):** `openpyxl` requires bridge **≥ 1.4.7** — it was not whitelisted in 1.4.6.
-
-### Blocked Python Imports
-`os`, `subprocess`, `shutil`, `socket`, `ctypes`, `pickle`, `importlib`, `http`, `urllib`, `signal`, `multiprocessing`, `tempfile`, `glob`, `inspect`, `code`, `codeop`
-
-### Blocked Calls
-`eval`, `exec`, `compile`, `__import__`, `getattr`, `setattr`, `delattr`, `globals`, `locals`, `vars`, `breakpoint`
-
-### Blocked Attribute Access
-`__builtins__`, `__subclasses__`, `__globals__`, `__code__`
-
-### Execution Confirmation Policy
-- **Read-only scripts** (querying data, exporting info, listing elements): execute directly without asking for confirmation.
-- **Write scripts** (modifying the document, creating elements, deleting, updating models): ask the user for confirmation **once** before the first execution.
-- If a confirmed script fails with an exception and you fix it, **re-execute immediately without asking again** — the user already approved the intent.
-
-### Important
-- Do NOT attempt to bypass these restrictions. If a script requires a blocked import or call, inform the user and suggest an alternative within the allowed scope.
-- Use `pathlib.Path` instead of `os.path` for any path operations.
-- All development is focused on Navisworks API interaction — never generate scripts that interact with the file system, network, or operating system directly.
-
----
-
-## 4.1 Python.NET Runtime Contamination (Revit)
-
-The Python runtime inside Revit is **persistent and shared** across all script executions (both `send_command` and button). A failed import can leave a module in a broken state in `sys.modules` that affects all subsequent scripts in the same session.
-
-### Critical rule: never modify imports to diagnose an environment error
-
-If a button script fails with a Python.NET internal error (e.g. `InternalPythonnetException`, `FileNotFoundException` loading a .NET assembly), **do not change the imports**. The standard Revit boilerplate (`clr.AddReference("RevitAPI")` + `from Autodesk.Revit.DB import *`) is correct and matches all working scripts in the project. Changing it to specific imports will cause real import errors (`ParameterType`, `BuiltInParameterGroup` do not exist in Revit 2025+) and contaminate the runtime for subsequent executions.
-
-### Diagnosis flow for button execution errors
-
-1. **Check if the same script works via `send_command`** — if yes, the script is correct.
-2. **Check if the error is a .NET assembly load failure** (e.g. `DesktopConnectorInterop`, `AcWebServices`) — this is an environment/session issue, not a script issue.
-3. **Do not touch imports.** Tell the user the session is contaminated and ask them to restart Revit.
-4. After restart, the button will work as expected.
-
-### Known environment error: AcWebServices / DesktopConnectorInterop
-
-```
-Python.Runtime.InternalPythonnetException: Failed to create Python type for AcWebServices
----> System.IO.FileNotFoundException: Could not load file or assembly 'DesktopConnectorInterop'
-```
-
-This error is caused by Revit loading `AcWebServices.dll` (part of Revit core) which references `DesktopConnectorInterop`, a DLL that only exists if Autodesk Desktop Connector is installed. It is triggered by `clr.AddReference` calling `UpdateCLRModuleDict`, which enumerates all assemblies in the AppDomain. **It is not caused by our script.** The only fix is restarting Revit.
-
----
-
-## 5. Script Creation
-
-When asked to generate a script, since it is an iterative process, **scripts are not saved to source until the user explicitly says so**. Prepare the script and send it directly via `send_command`.
-
-There are multiple sources of context available. Use them in this order to be efficient:
-
-### 1. AI History (check first)
-**`AI_History/`** — Full log of every script executed through the MCP bridge across all sessions:
-- **`Requests/`** — `Req_YYYYMMDD_HHMMSS_XXX.json` with the script content sent to Navisworks
-- **`Responses/`** — `Res_YYYYMMDD_HHMMSS_XXX.json` with execution results (status, errors, output data)
-- **Session logs** — `Pipe_Session_YYYYMMDD.log` with session-level activity
-
-Always check here first. If a similar problem was already solved, reuse the validated pattern instead of writing from scratch.
-
-### 2. Example Scripts (Handbook)
-
-> **MANDATORY — Always inspect the library before writing any script from scratch.**
-> Use `Glob` to list scripts in the relevant folder, then `Read` the closest match.
-> The library contains validated, production-ready patterns for both Navisworks and Revit.
-> Writing from scratch when a working example exists wastes time and introduces unnecessary risk.
-
-**`01_Scripts/01_Navisworks/`** — Proven Navisworks scripts organized by use case:
-- `01_ModelManagement/` — open, append, list and publish NWD files
-- `02_SearchSets/` — create Search Sets from property conditions
-- `03_ClashDetection/` — export, import and rename clash test results
-- `dataAnalysis/` — chart generation from clash data
-
-**`01_Scripts/02_Revit/`** — Proven Revit scripts organized by use case:
-- `00_Workflow/` — model sync, NWC export, parameter updates, key schedules
-- `02_Selection Filter/` — quick filters, slow filters, logical filters
-- `03_Edit and Create Objects/` — walls, floors, families, transforms
-- `10_Parameters/` — shared parameters, project parameters, value transfer
-- `24_MEP/` — duct and electrical creation
-- `23_Structure/` — beams, columns, foundations
-
-Use `Glob("01_Scripts/02_Revit/**/*.py")` or `Glob("01_Scripts/01_Navisworks/**/*.py")` to discover scripts, then read the relevant one before writing anything.
-
-### 3. Live API Exploration
-When you need to understand a specific object in the user's model, write a short script via `send_command` to inspect it at runtime (e.g. iterate properties, check types, list available methods). The live model is always the most accurate and up-to-date reference.
-
-### 4. API Stubs (targeted lookups only)
-**`02_PyNet Stubs/`** — Complete Python-style stubs mirroring .NET API surface with type hints and method signatures.
-
-> **Warning:** These files are very large (50k+ lines each). Do NOT read them in full. Only search for a specific method, property, or class name when the other sources don't provide the answer.
-
-### References
-**`00_References/iconsMin.txt`** — Full catalog of available icon names for button deployment.
-
-### Standard Boilerplate — Navisworks
-
-```python
-import clr
-import sys
-from pathlib import Path
-
-clr.AddReference("Autodesk.Navisworks.Api")
-from Autodesk.Navisworks.Api import *
-
-clr.AddReference("Autodesk.Navisworks.ComApi")
-from Autodesk.Navisworks.Api.ComApi import *
-
-clr.AddReference("Autodesk.Navisworks.Interop.ComApi")
-from Autodesk.Navisworks.Api.Interop.ComApi import *
-
-clr.AddReference("Autodesk.Navisworks.Clash")
-from Autodesk.Navisworks.Api.Clash import *
-
-clr.AddReference("System.Windows.Forms")
-clr.AddReference("System.Drawing")
-
-from System.Windows.Forms import *
-from System.Drawing import *
-from System.Collections.Generic import List
-
-from Autodesk.Navisworks.Api import Application
-doc = Application.ActiveDocument
-```
-
-### Standard Boilerplate — Revit
-
-When the active instance is Revit, the plugin injects a `__revit__` global that gives access to the running Autodesk Revit application. **Do not use `Application` from the Navisworks namespace — it does not exist in Revit scripts.**
-
-```python
-import clr
-import System
-from System import Enum, Environment
-from pathlib import Path
-
-clr.AddReference("RevitAPI")
-from Autodesk.Revit.DB import *
-
-# __revit__ is injected by the plugin — always use this to get the document
-doc = __revit__.ActiveUIDocument.Document
-```
-
-#### Key differences from Navisworks
-
-| | Navisworks | Revit |
+| | `send_command` | `send_command_by_path` |
 |---|---|---|
-| Document access | `Application.ActiveDocument` | `__revit__.ActiveUIDocument.Document` |
-| Main assembly | `Autodesk.Navisworks.Api` | `RevitAPI` |
-| UI access | `Application` | `__revit__.ActiveUIDocument` |
-| Transaction needed for writes | No | Yes — wrap changes in `Transaction` |
+| Use for | All development, one-off actions, fixes, analysis | Production scripts run repeatedly |
+| Script lives | Inline in the MCP call | Already saved in the repo |
 
-#### Transactions (required for any write operation in Revit)
-
-```python
-t = Transaction(doc, "Transaction name")
-t.Start()
-try:
-    # ... write operations ...
-    t.Commit()
-except:
-    t.RollBack()
-    raise
-```
-
-#### Getting special folder paths
-
-Never hardcode `Path.home() / "Desktop"` — it fails when OneDrive redirects the Desktop. Use .NET's `Environment.GetFolderPath` instead:
-
-```python
-from System import Environment
-desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
-out_path = Path(desktop) / "output.csv"
-```
-
-#### Iterating BuiltInCategory enum
-
-```python
-from System import Enum
-from Autodesk.Revit.DB import BuiltInCategory
-
-for bic in Enum.GetValues(BuiltInCategory):
-    bic_int = int(bic)
-    if bic_int >= 0:
-        continue  # skip non-negative (invalid) values
-    cat = doc.Settings.Categories.get_Item(bic)
-    if cat is not None and str(cat.CategoryType) == "Model":
-        ...
-```
+**Default is `send_command`.** Save to disk + switch to `send_command_by_path` when a script grows
+past ~150 lines or after its first successful run as a recurring workflow (much faster: ~215s → ~0s).
+Write short, optimized scripts (< ~80 lines inline). If a script grows too long, fix the design —
+do not save one-off scripts to disk just to work around length.
 
 ---
 
-### CastUtils — Critical for Type Casting
+## 7. Security (summary)
 
-pythonnet sometimes returns incorrect types, especially with interfaces. The PyNET plugin includes a static utility class `CastUtils` to correctly map objects. **Always use it when working with Clash or other interface-heavy APIs.**
+All scripts are statically validated before execution. Scope is strictly **Autodesk automation** —
+**no file system access, no network, no system-level actions**. Use `pathlib.Path`, never `os.path`.
 
-```python
-bundlePath = (Path.home() / "AppData" / "Roaming" / "Autodesk" / "ApplicationPlugins" / "RAEN.Navisworks.PyNET.bundle" / "Contents" / "2024")
-sys.path.append(str(bundlePath))
+Quick reference (full lists in [docs/security.md](docs/security.md)):
+- **Allowed imports:** `clr`, `sys`, `json`, `re`, `time`, `datetime`, `pathlib`, `typing`,
+  `threading`, `collections`, `xml`, `pandas`, `plotly`, `matplotlib`, `dash`, `webbrowser`,
+  `psutil`, `openpyxl`, `http.server`.
+- **Blocked imports:** `os`, `subprocess`, `shutil`, `socket`, `urllib`, `glob`, `inspect`, … 
+- **Blocked calls:** `eval`, `exec`, `compile`, `__import__`, `getattr`, `setattr`, …
 
-clr.AddReference("Raen.Core.Pynet.Resources")
-from Raen.Core.Pynet.Resources import CastUtils
-```
-
-Example — accessing clash tests:
-
-```python
-def ExportResults(document):
-    clashDocument = CastUtils.CastTo[DocumentClash](document.Clash)
-    tests = clashDocument.TestsData.Tests
-```
-
-Without `CastUtils`, `document.Clash` may return an unusable proxy object. This applies to any Navisworks API property that returns an interface type.
-
-### Code Structure Convention
-
-All scripts follow a class-based pattern with a single entry-point call at the bottom.
-
-**When saving a script** (to source or deploying to a button), always use the full class-based structure and include `print` statements that give the user clear feedback (progress, summary, results). The script must be self-contained and user-friendly — the user will run it without the AI in the loop.
-
-```python
-class FeatureManager:
-    @staticmethod
-    def Run(document):
-        data = DataProcessor.Process(document)
-        print(f"Processed {len(data)} elements")
-        DialogManager.ShowResult(data)
-
-class DataProcessor:
-    @staticmethod
-    def Process(document):
-        # business logic
-        print("Processing...")
-        return result
-
-class DialogManager:
-    @staticmethod
-    def ShowResult(data):
-        MessageBox.Show(str(data), "PyNet", MessageBoxButtons.OK, MessageBoxIcon.Information)
-
-# Entry point
-FeatureManager.Run(doc)
-```
+Do NOT attempt to bypass these. If a script needs something blocked, tell the user and suggest an
+alternative within scope.
 
 ---
 
-## 6. Windows Forms in Revit Scripts
+## 8. Execution confirmation policy
 
-Using WinForms from PyNET inside Revit is supported but has several hard-won rules. Ignore them and you get crashes or silent context loss.
-
-### Import order — critical
-
-`System.Windows.Forms` contains its own `TaskDialog` class (.NET 6+). If you do `from System.Windows.Forms import *` **after** `from Autodesk.Revit.UI import TaskDialog`, the WinForms `TaskDialog` silently overwrites the Revit one and the constructor fails with "No method matches".
-
-**Always import WinForms before Revit UI:**
-
-```python
-from Autodesk.Revit.DB import *
-from System.Windows.Forms import *      # WinForms first
-from System.Drawing import *
-from Autodesk.Revit.UI import TaskDialog, TaskDialogCommonButtons, TaskDialogIcon  # Revit UI last — wins
-```
-
-### super().__init__() is mandatory
-
-Python.NET 3.x requires explicit `super().__init__()` as the first line of any class that inherits from a .NET type. Without it, accessing `.Text`, `.Location`, or any .NET property crashes with `NullReferenceException`.
-
-```python
-class MyForm(Form):
-    def __init__(self):
-        super().__init__()   # MANDATORY — must be first
-        self.Text = "Title"  # safe only after super().__init__()
-```
-
-### Application.EnableVisualStyles() / SetCompatibleTextRenderingDefault
-
-Revit has already created Win32 windows, so both calls may throw. Wrap in try/except and never call `SetCompatibleTextRenderingDefault`:
-
-```python
-try:
-    Application.EnableVisualStyles()
-except Exception:
-    pass
-# Never call Application.SetCompatibleTextRenderingDefault() — always throws in Revit
-```
-
-### No Revit API calls inside form event handlers
-
-Scripts run inside `IExternalEventHandler.Execute()`. When `form.ShowDialog()` starts a WinForms message loop, Revit's context is in an ambiguous state. Any Revit API call (opening documents, transactions, collectors) inside a button click handler **will fail or crash Revit**.
-
-**Pattern: form is UI-only, all API work happens after ShowDialog returns.**
-
-```python
-class MyForm(Form):
-    def __init__(self):
-        super().__init__()
-        self.confirmed = False
-        # ... build UI
-
-    def OnExecute(self, sender, args):
-        self.confirmed = True
-        self.Close()   # just close — no API calls here
-
-    def OnCancel(self, sender, args):
-        self.Close()
-
-form = MyForm()
-form.ShowDialog()
-
-if form.confirmed:
-    # All Revit API work here — we're still inside ExternalEventHandler.Execute()
-    app = __revit__.Application
-    doc = app.OpenDocumentFile(...)
-    # transactions, collectors, etc.
-```
-
-### No Application.DoEvents()
-
-`Application.DoEvents()` inside an ExternalEventHandler causes Revit re-entrancy and crashes. Never use it.
-
-### TaskDialog — string hell
-
-`Autodesk.Revit.UI.TaskDialog` is unusually painful with Python.NET 3.x. Follow these rules exactly:
-
-**Use plain Python `str` — never `System.String(...)`.**  
-`System.String` in .NET has no constructor that accepts a string (you can't `new String("text")` in C#). Python.NET exposes this, so `System.String("PyNET")` throws "No method matches". Plain `str` works because Python.NET converts it automatically.
-
-```python
-# WRONG — System.String has no string constructor
-dlg = TaskDialog(System.String("PyNET"))
-dlg.MainInstruction = System.String("Done!")   # same problem on properties
-
-# CORRECT
-dlg = TaskDialog("PyNET")
-dlg.MainInstruction = "Done!"
-```
-
-**Import order matters — see above.** If `from System.Windows.Forms import *` comes after the Revit UI import, `TaskDialog` resolves to `System.Windows.Forms.TaskDialog` (a completely different class), and even plain `str` fails. Always import WinForms before `Autodesk.Revit.UI`.
-
-**Full working pattern:**
-
-```python
-from Autodesk.Revit.DB import *
-from System.Windows.Forms import *
-from System.Drawing import *
-from Autodesk.Revit.UI import TaskDialog, TaskDialogCommonButtons, TaskDialogIcon
-
-dlg = TaskDialog("PyNET")
-dlg.TitleAutoPrefix = False
-dlg.MainInstruction = "Done!"
-dlg.MainContent = "Both models processed correctly."
-dlg.CommonButtons = TaskDialogCommonButtons.Ok
-dlg.MainIcon = TaskDialogIcon.TaskDialogIconInformation
-dlg.Show()
-```
-
-### Reference script
-
-`01_Scripts/02_Revit/16_WindowsForms/OpenModelsCreateWallTest.py` — validated end-to-end example: form for confirmation, full Revit API work (open/transaction/save/close) after ShowDialog, TaskDialog result.
+- **Read-only scripts** (query, export, list): execute directly, no confirmation.
+- **Write scripts** (modify, create, delete, update the model): ask the user **once** before the
+  first execution.
+- If a confirmed script fails and you fix it, **re-execute immediately without asking again** — the
+  user already approved the intent.
 
 ---
 
-## 7. UI Management via MCP (Navisworks)
+## 9. Running Python — use MCP, always
 
-PyNET Platform allows dynamic management of the Navisworks Ribbon via the MCP protocol. You can create persistent modules and buttons that execute Python scripts.
-
-### UI Inspection
-* **Tool:** `get_pynet_ui_layout` — Returns the full UI structure. Essential for obtaining `Id` values before updating or deleting elements.
-
-### Creation and Deployment
-| Action | MCP Tool | Main Input |
-| :--- | :--- | :--- |
-| **Create Module** | `create_pynet_module` | Name of the new module |
-| **Deploy Button** | `deploy_script_button` | `module_id`, script path, button name, icon |
-
-### Editing and Cleanup
-* **Update Button:** `update_script_button` — changes metadata (name, icon, tooltip) of an existing button.
-* **Delete Button:** `delete_script_button` — removes a button from the module.
-* **Delete Module:** `delete_pynet_module` — removes a module and all its buttons.
-
-### Icons
-
-To give buttons a professional appearance, use predefined icon names when calling `deploy_script_button`. See the full catalog in **`00_References/iconsMin.txt`** (e.g. `Gear`, `Python`, `Database`, `Search`, `Eye`, `ChartBar`, `ShieldSearch`). If none is specified, the system assigns the `Default` icon.
+The MCP bridge (`send_command`) is the right tool for any Python task — file generation, data
+processing, Excel, API queries. The plugin runs CPython 3.10 with pandas, openpyxl, matplotlib, etc.
+Only fall back to Bash/PowerShell for genuine OS operations (pip install, git). If a whitelisted
+library is missing and needed regularly, flag it so it can be added.
 
 ---
 
-## 8. Output Window
+## 10. Interaction mode
 
-Control the visibility of the console where `print()` results and script errors are displayed:
-* **Tool:** `configure_output_window(pid, is_available=True/False)`
-* Useful for debugging complex scripts at runtime.
+**Default: Production.** Unless `/DevMode developer` was invoked this session, behave in Production:
+- Act as an AI integrated into the software — no mention of scripts, Python, JSON, MCP, PIDs, API
+  names, or internals.
+- Describe actions and results in natural language ("I scanned the models and found 7 element
+  groups").
+- Explain failures in user-friendly terms.
 
----
+Use **Developer Mode** (full scripts, JSON, stack traces) only when activated with `/DevMode developer`.
+See the `DevMode` skill for the full spec.
 
-## 9. Running Python — Use MCP, Always
-
-**The MCP bridge (`send_command`) is the right tool for executing any Python task** — file generation, data processing, Excel creation, API queries — not Bash, not PowerShell. The plugin runs CPython 3.10 with pandas, openpyxl (via sys.modules), matplotlib, etc. already available.
-
-Only fall back to Bash/PowerShell for operations that genuinely require the local OS (e.g. installing packages with pip, or git commands). If a package is missing, install it once with pip locally and then use it from MCP going forward.
-
-If a library is missing from the whitelist and needed regularly, flag it so it can be added.
-
----
-
-## 9.1 Reading Excel files via MCP
-
-**Usar siempre openpyxl primero. Si falla, pandas como fallback.**
-
-#### Opción 1 (preferida) — openpyxl
-
-```python
-import openpyxl
-
-wb = openpyxl.load_workbook(r"C:\path\to\file.xlsx", data_only=True)
-
-result = {}
-for sheet_name in wb.sheetnames:
-    ws = wb[sheet_name]
-    rows = [[str(v) if v is not None else "" for v in row] for row in ws.iter_rows(values_only=True)]
-    result[sheet_name] = {"rows": len(rows), "data": rows}
-
-ia_Result = result
-```
-
-#### Opción 2 (fallback) — pandas
-
-```python
-import pandas as pd
-
-xl = pd.ExcelFile(r"C:\path\to\file.xlsx")
-
-result = {}
-for sheet in xl.sheet_names:
-    df = xl.parse(sheet)
-    result[sheet] = {
-        "columns": list(df.columns),
-        "rows": len(df),
-        "data": df.fillna("").to_dict(orient="records")
-    }
-
-ia_Result = result
-```
-
-### Known issue: `module 'clr' has no attribute '_available_namespaces'`
-
-This error means the Revit/Navisworks process has a corrupted Python.NET state from startup. It is **not fixable at script level** — do not attempt workarounds (fake numpy injection, sys.meta_path manipulation, etc.). The only fix is **restarting the host application**.
-
-**Decision flow:**
-1. Send the simple pandas script above.
-2. If it succeeds → done.
-3. If it fails with `_available_namespaces` → tell the user the session needs a restart, explain it happens once per bad startup, and ask them to reopen Revit/Navisworks.
-4. After restart, send the exact same script — it will work.
-
-> **Never use Bash/PowerShell to read Excel files.** Never try openpyxl alone (it also imports numpy). Never try to patch sys.modules or sys.meta_path. Just pandas, and if broken — restart.
-
----
-
-## 10. Interaction Mode
-
-**Default mode: Production.** Unless the user has invoked `/DevMode developer` in the current session, always behave in Production Mode:
-
-- Act as an AI with direct integration into the software — no mention of scripts, Python, JSON, MCP, PIDs, API names, or technical internals
-- Describe actions and results in natural language ("I scanned the models and found 7 element groups", "I've set a 10mm tolerance for MEP tests")
-- If something fails, explain it in user-friendly terms
-
-Use **Developer Mode** only when explicitly activated with `/DevMode developer`. In that mode, show full script content, JSON responses, technical details, and stack traces.
-
-See `/DevMode` skill for full behavioral spec.
-
----
-
-## 11. API Stubs
-
-Stubs live in **`02_PyNet Stubs/`** and are committed to the repo. Pylance picks them up via `python.analysis.extraPaths` configured in VS Code user settings pointing to that folder.
-
-### Structure
-
-```
-02_PyNet Stubs/
-  Autodesk/
-    Navisworks/   ← generated from Navisworks 2024
-    Revit/        ← generated from Revit 2027
-  System/         ← legacy .NET stubs (kept, useful for intellisense)
-```
-
-### IntelliSense setup (VS Code)
-
-For Pylance to resolve API classes like `Wall`, `FilteredElementCollector`, `Search`, etc., the stubs path must be registered in VS Code.
-
-**Check on session start:** verify whether `python.analysis.extraPaths` in the user's VS Code settings includes the stubs folder:
-
-```
-%APPDATA%\Pynet\Library\02_PyNet Stubs
-```
-
-The user settings file is at:
-```
-C:\Users\<user>\AppData\Roaming\Code\User\settings.json
-```
-
-If it is missing, **ask the user** whether they write scripts and would like IntelliSense autocomplete. If yes, explain:
-
-> "I can configure VS Code so that when you write scripts, it automatically suggests Revit and Navisworks API classes and methods as you type — like autocomplete for the API. It's a one-time setup. Want me to set it up?"
-
-Then add the path to their `settings.json`. If the file doesn't exist, create it. Never modify other settings already present.
-
----
-
-### Generating stubs
-
-Run `01_Scripts/00_utils/GenerateStubs.py` from the active host via `send_command`. The script:
-
-1. **Auto-detects the host** — Revit (`__revit__` global present) or Navisworks
-2. **Loads all relevant assemblies** for that host
-3. **Deletes only `Autodesk/<Host>/`** — Navisworks and Revit stubs coexist
-4. **Regenerates** with correct Python syntax (keywords escaped, arrays/pointers/by-ref mapped)
-5. Writes directly to `02_PyNet Stubs/` in the repo
-
-**One set of stubs per host, always the version currently open.** Do not maintain stubs for multiple versions of the same host — Pylance would see conflicting class definitions.
-
-### Assembly sets
-
-| Host | Assemblies |
-|------|-----------|
-| Navisworks | `Autodesk.Navisworks.Api`, `.ComApi`, `.Interop.ComApi`, `.Clash` |
-| Revit | `RevitAPI`, `RevitAPIUI` |
-| Civil 3D | `RevitAPI`, `RevitAPIUI`, `AeccXUiLand`, `AeccXDbLand` |
-
-### Known type mappings
-
-| .NET | Python stub |
-|------|-------------|
-| `String` | `str` |
-| `Boolean` | `bool` |
-| `Int32` / `Int64` | `int` |
-| `Double` / `Single` | `float` |
-| `Void` | `None` |
-| `T[]` (array) | `list` |
-| `T&` (by-ref / out) | same as `T` |
-| `T*` (pointer) | same as `T` |
-| Python keywords as param names | appended `_` (e.g. `type_`, `from_`, `in_`) |
+> **Language:** match the user's conversation language (Spanish ↔ Spanish, English ↔ English).
+> All persistent repo AI artifacts (this file, `docs/`, skills) stay in **English**. See `CODEX.md`.
