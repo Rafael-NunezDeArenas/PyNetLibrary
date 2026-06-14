@@ -42,9 +42,9 @@ The Router row above (`RevitApiPatterns`) is a **reference** to read before writ
 it lives in `.claude/commands/` but is consulted, not run.
 
 Everything else in `.claude/commands/` is a **workflow Skill** the *user* invokes via slash command:
-`/ClashDetection`, `/ClashCoordination`, `/QCModelAudit`, `/QuantityTakeoff`, `/DevMode`. They are
+`/ClashDetection`, `/ClashCoordination`, `/ClashToleranceComparison`, `/QCModelAudit`, `/QuantityTakeoff`, `/WindSiting`, `/DevMode`. They are
 self-contained and auto-load when invoked — do not duplicate their content here. Suggest the matching
-one when the user describes its task (e.g. a clash run, a QC audit, a 5D takeoff).
+one when the user describes its task (e.g. a clash run, a QC audit, a 5D takeoff, a GIS/wind-farm siting study).
 
 ---
 
