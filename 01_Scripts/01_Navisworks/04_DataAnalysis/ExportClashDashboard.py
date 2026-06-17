@@ -15,16 +15,20 @@ from pathlib import Path
 from collections import defaultdict
 
 clr.AddReference("Autodesk.Navisworks.Api")
-from Autodesk.Navisworks.Api import *
+from Autodesk.Navisworks.Api import Application
 
 clr.AddReference("Autodesk.Navisworks.Clash")
-from Autodesk.Navisworks.Api.Clash import *
-
+from Autodesk.Navisworks.Api.Clash import DocumentClash
 clr.AddReference("System.Windows.Forms")
 clr.AddReference("System.Drawing")
 
-from System.Windows.Forms import *
-from System.Drawing import *
+from System.Windows.Forms import (
+    Form, Button, GroupBox, DataGridView, AnchorStyles,
+    FormBorderStyle, FormStartPosition,
+    DataGridViewAutoSizeColumnMode, DataGridViewSelectionMode,
+    DataGridViewColumnHeadersHeightSizeMode,
+)
+from System.Drawing import Point, Size, Color, Icon
 
 bundlePath = (Path.home() / "AppData" / "Roaming" / "Autodesk" / "ApplicationPlugins" / "RAEN.Navisworks.PyNET.bundle" / "Contents" / "2024")
 NavisworksIconPath = (Path.home() / "AppData" / "Roaming" / "Autodesk" / "ApplicationPlugins" / "RAEN.Navisworks.PyNET.bundle" / "Contents" / "2024" / "Images" / "manage.ico")
@@ -40,6 +44,10 @@ repo_base = user_home / "source" / "repos" / "GithubRNM" / "PyNetLibrary" / "03_
 VIEWER_DIR = repo_base / "dist"
 DASHBOARD_DIR = repo_base / "dashboard"
 PORT = 8095
+
+sys.path.append(str(Path.home() / "AppData" / "Roaming" / "Pynet" / "Library" / "01_Scripts" / "00_utils"))
+from pynet_clash import get_clash_tests
+
 
 class ClashExtractor:
     """Extracts clash data from the active document."""
@@ -110,7 +118,7 @@ class ClashExtractor:
         allClashes = []
         testsSummary = []
 
-        for test in testsData.Value.TestsRoot.Children:
+        for test in get_clash_tests(clashDocument):
             results = list(ClashExtractor.IterResults(test))
             count = len(results)
             status_counts = {}

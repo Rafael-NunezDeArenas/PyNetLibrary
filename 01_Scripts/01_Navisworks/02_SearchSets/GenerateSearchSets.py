@@ -5,22 +5,12 @@ import sys
 from pathlib import Path
 
 clr.AddReference("Autodesk.Navisworks.Api")
-from Autodesk.Navisworks.Api import *
-
-clr.AddReference("Autodesk.Navisworks.ComApi")
-from Autodesk.Navisworks.Api.ComApi import *
-
-clr.AddReference("Autodesk.Navisworks.Interop.ComApi")
-from Autodesk.Navisworks.Api.Interop.ComApi import *
-
-clr.AddReference("Autodesk.Navisworks.Clash")
-from Autodesk.Navisworks.Api.Clash import *
+from Autodesk.Navisworks.Api import (
+    Application, Search, SearchLocations, SearchCondition, VariantData, SelectionSet
+)
 
 clr.AddReference("System.Windows.Forms")
-clr.AddReference("System.Drawing")
-
-from System.Windows.Forms import*
-from System.Drawing import*
+from System.Windows.Forms import OpenFileDialog, DialogResult, MessageBox, MessageBoxButtons, MessageBoxIcon
 
 from System.Collections.Generic import List
 
@@ -50,7 +40,7 @@ class SearchSetsManager():
         Retrieves all Selection Sets from the active Navisworks document.
 
         Args:
-            document (Autodesk.Navisworks.Api.Document): 
+            document (Autodesk.Navisworks.Api.Document):
                 The currently active Navisworks document.
 
         Returns:
@@ -59,6 +49,18 @@ class SearchSetsManager():
                 currently defined in the document.
         """
         return document.SelectionSets
+
+    @staticmethod
+    def ClearSets(document):
+        """
+        Removes all Selection Sets from the active Navisworks document.
+        No transaction needed — write operations on DocumentSelectionSets are direct.
+
+        Args:
+            document (Autodesk.Navisworks.Api.Document):
+                The currently active Navisworks document.
+        """
+        document.SelectionSets.Clear()
     @staticmethod
     def CreateSet(value, selectionSets):
         """

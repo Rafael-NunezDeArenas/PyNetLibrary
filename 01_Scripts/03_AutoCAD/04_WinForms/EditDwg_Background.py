@@ -24,30 +24,11 @@ from System.Windows.Forms import (
 )
 from System.Drawing import Size, Point
 
-TEST_DIR = Path(r"C:\Temp\PyNET3")
-FILES = ["PyNET_A.dwg", "PyNET_B.dwg"]
+FILES = [
+    Path(r"C:\Users\34655\OneDrive\Escritorio\PyNET_Test_1.dwg"),
+    Path(r"C:\Users\34655\OneDrive\Escritorio\PyNET_Test_2.dwg"),
+]
 
-# Prepare fresh test files
-TEST_DIR.mkdir(parents=True, exist_ok=True)
-for i, filename in enumerate(FILES, 1):
-    fp = TEST_DIR / filename
-    db = Database(True, True)
-    try:
-        t = db.TransactionManager.StartTransaction()
-        try:
-            bt = t.GetObject(db.BlockTableId, OpenMode.ForRead)
-            ms = t.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite)
-            ln = Line(Point3d(0, 0, 0), Point3d(i * 100.0, i * 50.0, 0))
-            ms.AppendEntity(ln)
-            t.AddNewlyCreatedDBObject(ln, True)
-            t.Commit()
-        except:
-            t.Abort()
-            raise
-        db.SaveAs(str(fp), DwgVersion.Current)
-    finally:
-        db.Dispose()
-    print(f"Prepared: {filename}")
 
 
 class EditDwgForm(Form):
@@ -64,8 +45,8 @@ class EditDwgForm(Form):
         lbl.Text = (
             "BACKGROUND mode — files are NOT opened in the UI.\n"
             "Will edit and save silently:\n\n"
-            "  • PyNET_A.dwg — new line to (50,200)\n"
-            "  • PyNET_B.dwg — new line to (150,300)"
+            "  • PyNET_Test_1.dwg — new line to (50,200)\n"
+            "  • PyNET_Test_2.dwg — new line to (150,300)"
         )
         lbl.Location = Point(20, 20)
         lbl.Size = Size(400, 90)
@@ -106,8 +87,7 @@ else:
     ]
 
     results = []
-    for filename, (start, end) in zip(FILES, new_lines):
-        file_path = TEST_DIR / filename
+    for file_path, (start, end) in zip(FILES, new_lines):
 
         db = Database(False, True)
         db.ReadDwgFile(str(file_path), FileOpenMode.OpenForReadAndAllShare, False, "")
@@ -127,8 +107,8 @@ else:
         finally:
             db.Dispose()  # always — releases file handle whether SaveAs succeeded or not
 
-        print(f"Updated: {filename}")
-        results.append({"file": filename, "status": "ok"})
+        print(f"Updated: {file_path.name}")
+        results.append({"file": file_path.name, "status": "ok"})
 
     MessageBox.Show(
         "Done! Files saved silently — no tabs opened.",

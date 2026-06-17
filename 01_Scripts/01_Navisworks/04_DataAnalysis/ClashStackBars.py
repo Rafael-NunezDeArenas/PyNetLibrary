@@ -8,23 +8,10 @@ import matplotlib.pyplot as plt
 import re
 
 clr.AddReference("Autodesk.Navisworks.Api")
-from Autodesk.Navisworks.Api import *
-
-clr.AddReference("Autodesk.Navisworks.ComApi")
-from Autodesk.Navisworks.Api.ComApi import *
-
-clr.AddReference("Autodesk.Navisworks.Interop.ComApi")
-from Autodesk.Navisworks.Api.Interop.ComApi import *
+from Autodesk.Navisworks.Api import Application
 
 clr.AddReference("Autodesk.Navisworks.Clash")
-from Autodesk.Navisworks.Api.Clash import *
-
-clr.AddReference("System.Windows.Forms")
-clr.AddReference("System.Drawing")
-
-from System.Windows.Forms import *
-from System.Drawing import *
-
+from Autodesk.Navisworks.Api.Clash import DocumentClash, ClashResultStatus
 bundlePath = (Path.home()/ "AppData"/ "Roaming"/ "Autodesk"/ "ApplicationPlugins"/ "RAEN.Navisworks.PyNET.bundle"/ "Contents"/ "2024")
 NavisworksinconPath = (Path.home()/ "AppData"/ "Roaming"/ "Autodesk"/ "ApplicationPlugins"/ "RAEN.Navisworks.PyNET.bundle"/ "Contents"/ "2024" / "Images" / "manage.ico")
 
@@ -38,6 +25,10 @@ from Autodesk.Navisworks.Api import Application
 from Autodesk.Navisworks.Api.Clash import DocumentClash
 
 #endregion
+
+
+sys.path.append(str(Path.home() / "AppData" / "Roaming" / "Pynet" / "Library" / "01_Scripts" / "00_utils"))
+from pynet_clash import get_clash_tests
 
 
 class ClashDataResult:
@@ -57,7 +48,14 @@ class ClashDataResult:
         self.approved = 0
         self.resolved = 0
 
-        for children in test.Children:
+        results = []
+        for child in test.Children:
+            if child.IsGroup:
+                results.extend(child.Children)
+            else:
+                results.append(child)
+
+        for children in results:
             if str(children.Status).upper() == str(ClashResultStatus.New).upper():
                 self.new += 1
             if str(children.Status).upper() == str(ClashResultStatus.Active).upper():
@@ -78,7 +76,7 @@ class DataManager:
     @staticmethod
     def ExtractClashData(document):
         clashDocument = CastUtils.CastTo[DocumentClash](document.Clash)
-        tests = clashDocument.TestsData.Tests
+        tests = get_clash_tests(clashDocument)
         return [ClashDataResult(test) for test in tests]
 
 

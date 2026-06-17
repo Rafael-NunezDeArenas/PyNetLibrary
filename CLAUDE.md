@@ -14,13 +14,18 @@ IronPython). Full Python 3 syntax plus the `clr` bridge to .NET and the Autodesk
 
 Scripts are sent to the plugin through the MCP bridge and executed locally inside the host process.
 
+> **QGIS is a separate environment.** Standalone **PyQGIS** scripts (`04_QGIS`) are NOT PyNET-hosted —
+> they run headless in QGIS's own Python launcher, outside the bridge and its validator
+> ([docs/qgis.md](docs/qgis.md)). GIS *inside* AutoCAD (Map 3D / Civil, `03_AutoCAD/20_GIS`) **is**
+> bridge-hosted and lives under [docs/autocad-civil.md](docs/autocad-civil.md).
+
 > **Always check `list_active_instances` first** to identify the running host and PID — boilerplate
 > and APIs differ per host. Civil 3D appears as **"AutoCAD"** in the instance list.
 
 > **Timeout rule:** always use a minimum timeout of **60 seconds** when calling `send_command`.
 
 > **MCP bridge:** `pip show pynet-mcp-bridge` (NOT `pynet-bridge`) using Python 3.10 pip at
-> `C:\Users\34655\AppData\Local\Programs\Python\Python310\Scripts\pip.exe`. Installed: **1.4.9**.
+> `C:\Users\34655\AppData\Local\Programs\Python\Python310\Scripts\pip.exe`. Installed: **1.4.10**.
 
 ---
 
@@ -31,7 +36,8 @@ Scripts are sent to the plugin through the MCP bridge and executed locally insid
 | A **Navisworks** script | [docs/navisworks.md](docs/navisworks.md) |
 | A **Revit** script | [docs/revit.md](docs/revit.md) |
 | A Revit **element query / measurement** | [.claude/commands/RevitApiPatterns.md](.claude/commands/RevitApiPatterns.md) |
-| An **AutoCAD / Civil 3D** script | [docs/autocad-civil.md](docs/autocad-civil.md) |
+| An **AutoCAD / Civil 3D** script (incl. GIS *inside* AutoCAD — Map 3D, `03_AutoCAD/20_GIS`) | [docs/autocad-civil.md](docs/autocad-civil.md) |
+| A **standalone QGIS / PyQGIS** script (`04_QGIS`, headless, NOT Autodesk-hosted) | [docs/qgis.md](docs/qgis.md) |
 | Any **form / dialog / custom UI** (WinForms) | [docs/winforms.md](docs/winforms.md) |
 | Reading an **Excel** file | [docs/excel-mcp.md](docs/excel-mcp.md) |
 | **Generating stubs** / VS Code IntelliSense | [docs/stubs.md](docs/stubs.md) |
@@ -112,15 +118,21 @@ do not save one-off scripts to disk just to work around length.
 
 ## 7. Security (summary)
 
-All scripts are statically validated before execution. Scope is strictly **Autodesk automation** —
-**no file system access, no network, no system-level actions**. Use `pathlib.Path`, never `os.path`.
+The static validator only runs for scripts sent through the **MCP bridge** (`send_command`) into an
+Autodesk host. Scripts run by their own launcher — **standalone QGIS** (`04_QGIS`, see
+[docs/qgis.md](docs/qgis.md)) or a user-saved button — do NOT pass through it. Use `pathlib.Path`,
+never `os.path`.
 
 Quick reference (full lists in [docs/security.md](docs/security.md)):
 - **Allowed imports:** `clr`, `sys`, `json`, `re`, `time`, `datetime`, `pathlib`, `typing`,
-  `threading`, `collections`, `xml`, `pandas`, `plotly`, `matplotlib`, `dash`, `webbrowser`,
-  `psutil`, `openpyxl`, `http.server`.
-- **Blocked imports:** `os`, `subprocess`, `shutil`, `socket`, `urllib`, `glob`, `inspect`, … 
-- **Blocked calls:** `eval`, `exec`, `compile`, `__import__`, `getattr`, `setattr`, …
+  `threading`, `collections`, `xml`, `math`, `functools`, `pandas`, `plotly`, `matplotlib`, `dash`,
+  `webbrowser`, `psutil`, `openpyxl`, `uuid`, `zipfile`, `io`, `mimetypes`, `difflib`, `csv`,
+  `ifcopenshell`, `qgis`, `processing`, `webview`, `flask`. Submodules: `http.server`,
+  `urllib.request` (network — GIS data), `urllib.parse`.
+- **Blocked imports:** `os`, `subprocess`, `shutil`, `socket`, `glob`, `inspect`, … (NOT `urllib` —
+  `urllib.request` / `.parse` are allowed at submodule level).
+- **Blocked calls:** `eval`, `exec`, `compile`, `__import__`, `getattr`, `setattr`, … (blocked for MCP
+  only; user-authored scripts may use them).
 
 Do NOT attempt to bypass these. If a script needs something blocked, tell the user and suggest an
 alternative within scope.

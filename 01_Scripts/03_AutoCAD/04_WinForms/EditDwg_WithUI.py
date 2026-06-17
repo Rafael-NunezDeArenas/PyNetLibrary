@@ -26,8 +26,10 @@ from System.Windows.Forms import (
 )
 from System.Drawing import Size, Point
 
-TEST_DIR = Path(r"C:\Temp\PyNET3")
-FILES = ["PyNET_A.dwg", "PyNET_B.dwg"]
+FILES = [
+    Path(r"C:\Users\34655\OneDrive\Escritorio\PyNET_Test_1.dwg"),
+    Path(r"C:\Users\34655\OneDrive\Escritorio\PyNET_Test_2.dwg"),
+]
 
 
 class EditDwgForm(Form):
@@ -44,8 +46,8 @@ class EditDwgForm(Form):
         lbl.Text = (
             "UI mode — files will open as tabs in Civil 3D.\n"
             "Will edit, save, and leave open:\n\n"
-            "  • PyNET_A.dwg — new line to (50,200)\n"
-            "  • PyNET_B.dwg — new line to (150,300)"
+            "  • PyNET_Test_1.dwg — new line to (50,200)\n"
+            "  • PyNET_Test_2.dwg — new line to (150,300)"
         )
         lbl.Location = Point(20, 20)
         lbl.Size = Size(400, 90)
@@ -86,8 +88,7 @@ else:
     ]
 
     results = []
-    for filename, (start, end) in zip(FILES, new_lines):
-        file_path = TEST_DIR / filename
+    for file_path, (start, end) in zip(FILES, new_lines):
 
         # Open read-only — required so UpgradeDocOpen works without eWasOpenForWrite
         file_doc = DocumentCollectionExtension.Open(
@@ -118,8 +119,8 @@ else:
         file_doc.SendStringToExecute("_.QSAVE ", True, False, False)
         # Document stays open in the UI — user can inspect/close manually
 
-        print(f"Updated: {filename}")
-        results.append({"file": filename, "status": "ok"})
+        print(f"Updated: {file_path.name}")
+        results.append({"file": file_path.name, "status": "ok"})
 
     MessageBox.Show(
         "Done! Check the open tabs in Civil 3D.",

@@ -6,11 +6,10 @@ from datetime import datetime
 from System import Environment
 
 clr.AddReference("Autodesk.Navisworks.Api")
-from Autodesk.Navisworks.Api import *
+from Autodesk.Navisworks.Api import Application
 
 clr.AddReference("Autodesk.Navisworks.Clash")
-from Autodesk.Navisworks.Api.Clash import *
-
+from Autodesk.Navisworks.Api.Clash import DocumentClash
 bundle_base = Path.home() / "AppData" / "Roaming" / "Autodesk" / "ApplicationPlugins" / "Raen.Navisworks.Pynet.bundle" / "Contents"
 bundlePath = next((d for d in bundle_base.iterdir() if d.is_dir() and (d / "Raen.Core.Pynet.Resources.dll").exists()), None)
 sys.path.append(str(bundlePath))
@@ -18,6 +17,10 @@ clr.AddReference("Raen.Core.Pynet.Resources")
 from Raen.Core.Pynet.Resources import CastUtils
 
 doc = Application.ActiveDocument
+
+
+sys.path.append(str(Path.home() / "AppData" / "Roaming" / "Pynet" / "Library" / "01_Scripts" / "00_utils"))
+from pynet_clash import get_clash_tests
 
 
 class ElementExtractor:
@@ -101,10 +104,10 @@ class ClashExporter:
                 yield child
 
     @staticmethod
-    def collect(testsData):
+    def collect(clash_document):
         clashes = []
         idx = 1
-        for test in testsData.Value.TestsRoot.Children:
+        for test in get_clash_tests(clash_document):
             for r in ClashExporter.iter_results(test):
                 c = r.Center
                 clashes.append({
@@ -121,10 +124,9 @@ class ClashExporter:
     @staticmethod
     def run(document):
         clashDoc = CastUtils.CastTo[DocumentClash](document.Clash)
-        testsData = clashDoc.TestsData
 
         print("Collecting clash results...")
-        clashes = ClashExporter.collect(testsData)
+        clashes = ClashExporter.collect(clashDoc)
 
         doc_name = Path(document.FileName).stem if document.FileName else "Unknown"
         payload = {

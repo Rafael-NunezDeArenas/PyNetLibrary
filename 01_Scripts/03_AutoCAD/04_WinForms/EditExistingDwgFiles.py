@@ -18,29 +18,10 @@ from System.Windows.Forms import (
 )
 from System.Drawing import Size, Point
 
-TEST_DIR = Path(r"C:\Temp\PyNET3")
-FILES = ["PyNET_A.dwg", "PyNET_B.dwg"]
-
-# Prepare fresh test files before showing the form
-TEST_DIR.mkdir(parents=True, exist_ok=True)
-for i, filename in enumerate(FILES, 1):
-    fp = TEST_DIR / filename
-    db = Database(True, True)
-    t = db.TransactionManager.StartTransaction()
-    try:
-        bt = t.GetObject(db.BlockTableId, OpenMode.ForRead)
-        ms = t.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite)
-        ln = Line(Point3d(0, 0, 0), Point3d(i * 100.0, i * 50.0, 0))
-        ms.AppendEntity(ln)
-        t.AddNewlyCreatedDBObject(ln, True)
-        t.Commit()
-    except:
-        t.Abort()
-        db.Dispose()
-        raise
-    db.SaveAs(str(fp), DwgVersion.Current)
-    db.Dispose()
-    print(f"Prepared: {filename}")
+FILES = [
+    Path(r"C:\Users\34655\OneDrive\Escritorio\PyNET_Test_1.dwg"),
+    Path(r"C:\Users\34655\OneDrive\Escritorio\PyNET_Test_2.dwg"),
+]
 
 
 class EditDwgForm(Form):
@@ -55,10 +36,10 @@ class EditDwgForm(Form):
 
         lbl = Label()
         lbl.Text = (
-            "Will open the following files from C:\\Temp\\PyNET3,\n"
+            "Will open the following files from the Desktop,\n"
             "draw a line in each one and save:\n\n"
-            "  • PyNET_A.dwg — new line from (0,0) to (50,200)\n"
-            "  • PyNET_B.dwg — new line from (0,0) to (150,300)"
+            "  • PyNET_Test_1.dwg — new line from (0,0) to (50,200)\n"
+            "  • PyNET_Test_2.dwg — new line from (0,0) to (150,300)"
         )
         lbl.Location = Point(20, 20)
         lbl.Size = Size(400, 90)
@@ -100,8 +81,7 @@ else:
     ]
 
     results = []
-    for filename, (start, end) in zip(FILES, new_lines):
-        file_path = TEST_DIR / filename
+    for file_path, (start, end) in zip(FILES, new_lines):
 
         # Open file through DocumentManager — becomes visible/active in AutoCAD UI
         file_doc = DocumentCollectionExtension.Open(
@@ -129,8 +109,8 @@ else:
         file_doc.UpgradeDocOpen()
         db.SaveAs(file_doc.Name, True, DwgVersion.Current, None)
 
-        print(f"Updated: {filename}")
-        results.append({"file": filename, "status": "ok", "line_end": f"({end.X},{end.Y})"})
+        print(f"Updated: {file_path.name}")
+        results.append({"file": file_path.name, "status": "ok", "line_end": f"({end.X},{end.Y})"})
 
     MessageBox.Show(
         "Done!\n\n" + "\n".join(f"  {r['file']} — {r['status']}" for r in results),

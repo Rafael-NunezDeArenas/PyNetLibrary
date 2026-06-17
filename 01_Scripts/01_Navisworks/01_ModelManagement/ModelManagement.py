@@ -5,22 +5,10 @@ import sys
 from pathlib import Path
 
 clr.AddReference("Autodesk.Navisworks.Api")
-from Autodesk.Navisworks.Api import *
-
-clr.AddReference("Autodesk.Navisworks.ComApi")
-from Autodesk.Navisworks.Api.ComApi import *
-
-clr.AddReference("Autodesk.Navisworks.Interop.ComApi")
-from Autodesk.Navisworks.Api.Interop.ComApi import *
-
-clr.AddReference("Autodesk.Navisworks.Clash")
-from Autodesk.Navisworks.Api.Clash import *
+from Autodesk.Navisworks.Api import Application, PublishProperties
 
 clr.AddReference("System.Windows.Forms")
-clr.AddReference("System.Drawing")
-
-from System.Windows.Forms import*
-from System.Drawing import*
+from System.Windows.Forms import MessageBox, MessageBoxButtons, MessageBoxIcon
 
 from System.Collections.Generic import List
 from datetime import datetime

@@ -9,7 +9,6 @@ from Autodesk.Navisworks.Api import Application
 
 clr.AddReference("Autodesk.Navisworks.Clash")
 from Autodesk.Navisworks.Api.Clash import DocumentClash
-
 bundlePath = (
     Path.home()
     / "AppData" / "Roaming" / "Autodesk" / "ApplicationPlugins"
@@ -37,9 +36,12 @@ TARGET_TESTS: list[str] = []
 MM_TO_FEET = 1 / (0.3048 * 1000)
 
 
-def get_tests_data():
-    clash_doc = CastUtils.CastTo[DocumentClash](doc.Clash)
-    return clash_doc.TestsData
+def get_clash_doc():
+    return CastUtils.CastTo[DocumentClash](doc.Clash)
+
+
+sys.path.append(str(Path.home() / "AppData" / "Roaming" / "Pynet" / "Library" / "01_Scripts" / "00_utils"))
+from pynet_clash import get_clash_tests
 
 
 # ─── Approach A: edit via copy (official API pattern) ─────────────────────────
@@ -49,11 +51,12 @@ def get_tests_data():
 # apply the copy back with TestsEditTestFromCopy.
 
 def set_tolerance_via_copy(tolerance_mm: float, target_tests: list[str] = None):
-    tests_data = get_tests_data()
+    clash_doc = get_clash_doc()
+    tests_data = clash_doc.TestsData
     tolerance_ft = tolerance_mm * MM_TO_FEET
     updated = []
 
-    for test in tests_data.Value.TestsRoot.Children:
+    for test in get_clash_tests(clash_doc):
         if target_tests and test.DisplayName not in target_tests:
             continue
 
@@ -75,11 +78,12 @@ def set_tolerance_via_copy(tolerance_mm: float, target_tests: list[str] = None):
 # Useful for side-by-side comparisons without overwriting the source test.
 
 def duplicate_test_with_tolerance(test_name: str, new_name: str, tolerance_mm: float):
-    tests_data = get_tests_data()
+    clash_doc = get_clash_doc()
+    tests_data = clash_doc.TestsData
     tolerance_ft = tolerance_mm * MM_TO_FEET
 
     source = next(
-        (t for t in tests_data.Value.TestsRoot.Children if t.DisplayName == test_name),
+        (t for t in get_clash_tests(clash_doc) if t.DisplayName == test_name),
         None,
     )
     if source is None:
@@ -114,9 +118,8 @@ class FeatureManager:
         # Uncomment and adapt to use side-by-side comparison approach:
         #
         # print("Duplicating tests with new tolerance (Approach B)...")
-        # tests_data = get_tests_data()
         # results_b = []
-        # for test in list(tests_data.Value.TestsRoot.Children):
+        # for test in get_clash_tests(get_clash_doc()):
         #     dup_name = f"{test.DisplayName}_15mm"
         #     result = duplicate_test_with_tolerance(test.DisplayName, dup_name, TOLERANCE_MM)
         #     if result:

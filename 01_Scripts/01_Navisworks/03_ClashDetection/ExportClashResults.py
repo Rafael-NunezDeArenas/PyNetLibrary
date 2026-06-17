@@ -12,7 +12,6 @@ from Autodesk.Navisworks.Api import Application
 
 clr.AddReference("Autodesk.Navisworks.Clash")
 from Autodesk.Navisworks.Api.Clash import DocumentClash, ClashResultStatus
-
 clr.AddReference("System.Windows.Forms")
 clr.AddReference("System.Drawing")
 
@@ -33,6 +32,10 @@ doc = Application.ActiveDocument
 #endregion
 
 
+sys.path.append(str(Path.home() / "AppData" / "Roaming" / "Pynet" / "Library" / "01_Scripts" / "00_utils"))
+from pynet_clash import get_clash_tests
+
+
 class ClashDataResult():
     """
     Wrapper class used to extract, normalize and store information from
@@ -51,7 +54,14 @@ class ClashDataResult():
         self.approved: int = 0
         self.resolved: int = 0
 
-        for children in test.Children:
+        results = []
+        for child in test.Children:
+            if child.IsGroup:
+                results.extend(child.Children)
+            else:
+                results.append(child)
+
+        for children in results:
             if str(children.Status).upper() == str(ClashResultStatus.New).upper():
                 self.new += 1
             if str(children.Status).upper() == str(ClashResultStatus.Active).upper():
@@ -263,7 +273,7 @@ class ModelManager():
         """
         clashDocument = CastUtils.CastTo[DocumentClash](document.Clash)
 
-        tests = clashDocument.TestsData.Value.TestsRoot.Children
+        tests = get_clash_tests(clashDocument)
 
         path = DialogManager.ShowSaveFileDialog()
 
